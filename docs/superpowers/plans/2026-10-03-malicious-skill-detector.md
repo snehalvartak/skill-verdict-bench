@@ -6,7 +6,7 @@
 
 **Architecture:** Flat Python package `msd/`. A thin Ollama client (`systemone.py`) wraps `POST /v1/systemone`. `methods.py` exposes three callables with one signature (`skill_text -> Verdict`). `run.py` runs methods over a sample and writes JSONL plus `config.json`; `score.py` reads those files and prints metrics.
 
-**Tech Stack:** Python 3.11+, `pandas`, `pyarrow`, `pytest`, stdlib `urllib`. No other dependencies.
+**Tech Stack:** Python 3.11+, managed with `uv` (`uv add`, `uv run`), `pandas`, `pyarrow`, `pytest`, stdlib `urllib`. No other dependencies.
 
 **Spec:** `docs/superpowers/specs/2026-10-03-malicious-skill-detector-design.md`
 
@@ -33,7 +33,7 @@
 ### Task 1: Project setup and systemone client (includes smoke test)
 
 **Files:**
-- Create: `requirements.txt`, `.gitignore`, `msd/__init__.py`, `msd/systemone.py`, `tests/test_systemone.py`, `tests/fixtures/systemone_hello.json`
+- Create: `pyproject.toml`, `uv.lock`, `.gitignore`, `msd/__init__.py`, `msd/systemone.py`, `tests/test_systemone.py`, `tests/fixtures/systemone_hello.json`
 
 **Interfaces:**
 - Produces: `ask(state: str, questions: dict[str, tuple[str, dict]], model: str = "clef-flash", url: str = URL) -> dict[str, bool | None]` where `questions[id] = (instructions, {"true": str, "false": str})`; returns `None` for a question id whose answer could not be parsed, and never raises on network/JSON errors (returns all `None`).
@@ -43,9 +43,10 @@
 
 ```bash
 cd /Users/snehalvartak/Projects/malicious-skill-detector
-printf "pandas\npyarrow\npytest\n" > requirements.txt
+uv init --bare --python 3.11
+uv add pandas pyarrow
+uv add --dev pytest
 printf ".venv/\n__pycache__/\ndata/\nruns/\n" > .gitignore
-python3 -m venv .venv && .venv/bin/pip install -q -r requirements.txt
 mkdir -p msd tests/fixtures && touch msd/__init__.py
 ```
 
@@ -83,7 +84,7 @@ def test_ask_unreachable_returns_none(monkeypatch):
 
 - [ ] **Step 4: Run test to verify it fails, then implement**
 
-Run: `.venv/bin/pytest tests/test_systemone.py -v` → FAIL (`msd.systemone` missing).
+Run: `uv run pytest tests/test_systemone.py -v` → FAIL (`msd.systemone` missing).
 
 ```python
 # msd/systemone.py
@@ -124,7 +125,7 @@ Note: `ask` must read `URL` at call time. In the unreachable test the monkeypatc
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `.venv/bin/pytest tests/test_systemone.py -v` → 3 passed.
+Run: `uv run pytest tests/test_systemone.py -v` → 3 passed.
 
 - [ ] **Step 6: Record the smoke test and commit**
 
@@ -166,7 +167,7 @@ def test_empty_text_is_not_flagged():
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `.venv/bin/pytest tests/test_regex.py -v` → FAIL (import error).
+Run: `uv run pytest tests/test_regex.py -v` → FAIL (import error).
 
 - [ ] **Step 3: Implement**
 
@@ -191,7 +192,7 @@ def regex(skill_text):
 
 - [ ] **Step 4: Run to verify pass, commit**
 
-Run: `.venv/bin/pytest tests/test_regex.py -v` → 4 passed.
+Run: `uv run pytest tests/test_regex.py -v` → 4 passed.
 
 ```bash
 git add -A && git commit -m "feat: regex baseline" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
@@ -234,7 +235,7 @@ def test_sample_larger_than_class_takes_all():
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `.venv/bin/pytest tests/test_data.py -v` → FAIL.
+Run: `uv run pytest tests/test_data.py -v` → FAIL.
 
 - [ ] **Step 3: Implement**
 
@@ -271,11 +272,11 @@ def sample(df, n, seed=0):
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `.venv/bin/pytest tests/test_data.py -v` → 3 passed.
+Run: `uv run pytest tests/test_data.py -v` → 3 passed.
 
 - [ ] **Step 5: Verify the real download once**
 
-Run: `.venv/bin/python -c "from msd.data import load, sample; d=load(); s=sample(d,200); print(len(d), len(s), s.label.value_counts().to_dict())"`
+Run: `uv run python -c "from msd.data import load, sample; d=load(); s=sample(d,200); print(len(d), len(s), s.label.value_counts().to_dict())"`
 Expected: prints three values; `len(s)` is 200 and the label counts roughly 77/23. Note actual numbers in the Task 7 write-up. If a column name differs from the README, fix `load` only.
 
 - [ ] **Step 6: Commit**
@@ -332,7 +333,7 @@ def test_all_five_checks_defined():
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `.venv/bin/pytest tests/test_llm_methods.py -v` → FAIL.
+Run: `uv run pytest tests/test_llm_methods.py -v` → FAIL.
 
 - [ ] **Step 3: Implement `msd/checks.py`**
 
@@ -405,7 +406,7 @@ METHODS = {"ast10": ast10, "naive-llm": naive_llm, "regex": regex}
 
 - [ ] **Step 5: Run to verify pass**
 
-Run: `.venv/bin/pytest -v` → all tests pass.
+Run: `uv run pytest -v` → all tests pass.
 
 - [ ] **Step 6: Commit**
 
@@ -446,7 +447,7 @@ def test_run_writes_predictions_and_config(tmp_path, monkeypatch):
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `.venv/bin/pytest tests/test_run.py -v` → FAIL.
+Run: `uv run pytest tests/test_run.py -v` → FAIL.
 
 - [ ] **Step 3: Implement**
 
@@ -488,7 +489,7 @@ if __name__ == "__main__":
 
 - [ ] **Step 4: Run to verify pass, commit**
 
-Run: `.venv/bin/pytest -v` → all pass.
+Run: `uv run pytest -v` → all pass.
 
 ```bash
 git add -A && git commit -m "feat: run orchestrator" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
@@ -540,7 +541,7 @@ def test_by_category_recall():
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `.venv/bin/pytest tests/test_score.py -v` → FAIL.
+Run: `uv run pytest tests/test_score.py -v` → FAIL.
 
 - [ ] **Step 3: Implement**
 
@@ -601,7 +602,7 @@ if __name__ == "__main__":
 
 - [ ] **Step 4: Run to verify pass, commit**
 
-Run: `.venv/bin/pytest -v` → all pass.
+Run: `uv run pytest -v` → all pass.
 
 ```bash
 git add -A && git commit -m "feat: scoring and report" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
@@ -618,15 +619,15 @@ Requires Ollama running with `clef-flash`.
 
 - [ ] **Step 1: Time a tiny run first**
 
-Run: `.venv/bin/python -m msd.run --n 10` → prints a run dir. Check `predictions.jsonl` has 30 lines. Compute seconds per skill and estimate the 200-skill runtime; note it.
+Run: `uv run python -m msd.run --n 10` → prints a run dir. Check `predictions.jsonl` has 30 lines. Compute seconds per skill and estimate the 200-skill runtime; note it.
 
 - [ ] **Step 2: Full run**
 
-Run: `.venv/bin/python -m msd.run --n 200 --seed 0` (use `run_in_background` if the estimate exceeds 10 minutes).
+Run: `uv run python -m msd.run --n 200 --seed 0` (use `run_in_background` if the estimate exceeds 10 minutes).
 
 - [ ] **Step 3: Score**
 
-Run: `.venv/bin/python -m msd.score runs/<run_id>`
+Run: `uv run python -m msd.score runs/<run_id>`
 
 - [ ] **Step 4: Write `docs/experiments/001-baseline-200.md`**
 

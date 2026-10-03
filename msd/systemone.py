@@ -1,4 +1,4 @@
-import json, urllib.request
+import json, sys, urllib.request
 
 URL = "http://localhost:11434/v1/systemone"
 TAGS = "http://localhost:11434/api/tags"
@@ -22,7 +22,8 @@ def ask(state, questions, model="clef-flash", url=None):
     try:
         with urllib.request.urlopen(req, timeout=300) as r:
             return _extract(json.load(r), list(questions))
-    except Exception:  # ponytail: any failure counts as unparseable; run.py reports the count
+    except Exception as e:  # ponytail: any failure counts as unparseable; run.py reports the count
+        print(f"systemone call failed: {type(e).__name__}: {e}", file=sys.stderr)
         return {q: None for q in questions}
 
 def model_digest(model="clef-flash:latest"):

@@ -5,13 +5,15 @@ from msd.methods import METHODS
 from msd.systemone import model_digest
 
 def _read_done(pred):
-    """Return {(benchmark_id, method)} already written; drop a torn trailing line."""
+    """Return {(benchmark_id, method)} already scored; drop torn and unparseable lines."""
     done, good = set(), []
     for line in pred.read_text().splitlines():
         try:
             r = json.loads(line)
         except ValueError:
             break  # ponytail: only the last line can be torn by a kill; stop at the first bad one
+        if r["flag"] is None:
+            continue  # unparseable rows are retried, not kept
         good.append(line)
         done.add((r["benchmark_id"], r["method"]))
     pred.write_text("".join(l + "\n" for l in good))

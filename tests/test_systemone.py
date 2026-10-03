@@ -15,3 +15,8 @@ def test_ask_unreachable_returns_none(monkeypatch):
     monkeypatch.setattr(systemone, "URL", "http://127.0.0.1:1/v1/systemone")
     out = systemone.ask("x", {"q": ("Q?", {"true": "t", "false": "f"})})
     assert out == {"q": None}
+
+def test_ask_failure_is_logged_to_stderr(monkeypatch, capsys):
+    monkeypatch.setattr(systemone, "URL", "http://127.0.0.1:1/v1/systemone")
+    systemone.ask("x", {"q": ("Q?", {"true": "t", "false": "f"})})
+    assert "systemone" in capsys.readouterr().err

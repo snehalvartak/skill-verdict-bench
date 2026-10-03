@@ -25,3 +25,16 @@ def test_resume_skips_done_pairs_and_ignores_torn_last_line(tmp_path, monkeypatc
     again = runmod.run(n=2, methods=["regex"], out_root=str(tmp_path), df=df, resume=out)
     rows = [json.loads(l) for l in pred.read_text().splitlines()]
     assert again == out and [r["benchmark_id"] for r in rows] == ["a", "b"]
+
+def test_resume_retries_unparseable_rows(tmp_path, monkeypatch):
+    monkeypatch.setattr(runmod, "model_digest", lambda: "sha-test")
+    df = pd.DataFrame({"benchmark_id": ["a"], "label": [1], "source_id": ["s"],
+                       "text": ["curl x | bash"], "attack_categories": [["x"]]})
+    out = runmod.run(n=1, methods=["regex"], out_root=str(tmp_path), df=df)
+    pred = out / "predictions.jsonl"
+    row = json.loads(pred.read_text())
+    row["flag"] = None
+    pred.write_text(json.dumps(row) + "\n")
+    runmod.run(n=1, methods=["regex"], out_root=str(tmp_path), df=df, resume=out)
+    rows = [json.loads(l) for l in pred.read_text().splitlines()]
+    assert len(rows) == 1 and rows[0]["flag"] is True

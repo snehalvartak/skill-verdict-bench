@@ -49,3 +49,26 @@ def test_resume_rewrite_is_atomic(tmp_path, monkeypatch):
     with pytest.raises(OSError):
         runmod._read_done(pred)
     assert pred.read_text() == good + "\n" + '{"torn'  # original untouched
+
+def test_default_methods_exclude_controls(tmp_path, monkeypatch):
+    monkeypatch.setattr(runmod, "model_digest", lambda: "d")
+    stub = lambda t: {"flag": False, "evidence": "", "scores": {}}
+    monkeypatch.setattr(runmod, "METHODS", {m: stub for m in
+        ["ast10", "naive-llm", "regex", "ast10-split", "naive-x5"]})
+    df = pd.DataFrame({"benchmark_id": ["a"], "label": [1], "source_id": ["s"],
+                       "text": ["t"], "attack_categories": [[]]})
+    out = runmod.run(n=1, out_root=str(tmp_path), df=df)
+    assert {json.loads(l)["method"] for l in (out / "predictions.jsonl").read_text().splitlines()} == \
+        {"ast10", "naive-llm", "regex"}
+
+def test_part_is_passed_to_loader(tmp_path, monkeypatch):
+    monkeypatch.setattr(runmod, "model_digest", lambda: "d")
+    seen = {}
+    def fake_load(split, part="test"):
+        seen["args"] = (split, part)
+        return pd.DataFrame({"benchmark_id": ["a"], "label": [1], "source_id": ["s"],
+                             "text": ["t"], "attack_categories": [[]]})
+    monkeypatch.setattr(runmod, "load", fake_load)
+    out = runmod.run(n=1, split="random", part="validation", methods=["regex"], out_root=str(tmp_path))
+    assert seen["args"] == ("random", "validation")
+    assert json.loads((out / "config.json").read_text())["part"] == "validation"

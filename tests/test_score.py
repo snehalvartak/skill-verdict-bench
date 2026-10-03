@@ -29,3 +29,40 @@ def test_per_check_ignores_none_scores():
 def test_by_category_recall():
     rows = [R(1, True, attack_categories=["Exfil"]), R(1, False, attack_categories=["Exfil"])]
     assert by_category(rows) == {"Exfil": 0.5}
+
+from msd.score import auc, auc_by_check, youden_threshold, metrics_at, fit_logreg, predict_logreg
+
+def S(label, **scores):
+    return R(label, None, scores=scores)
+
+def test_auc_perfect_and_chance():
+    assert auc([S(1, a=0.9), S(0, a=0.1)]) == 1.0
+    assert auc([S(1, a=0.5), S(0, a=0.5)]) == 0.5
+
+def test_auc_uses_max_score_and_skips_rows_without_scores():
+    rows = [S(1, a=0.1, b=0.9), S(0, a=0.5, b=0.2), S(1)]
+    assert auc(rows) == 1.0
+
+def test_auc_single_class_is_none():
+    assert auc([S(1, a=0.9)]) is None
+
+def test_auc_by_check():
+    rows = [S(1, a=0.9, b=0.1), S(0, a=0.1, b=0.9)]
+    assert auc_by_check(rows) == {"a": 1.0, "b": 0.0}
+
+def test_youden_threshold_separates_classes():
+    rows = [S(1, a=0.3), S(1, a=0.4), S(0, a=0.05), S(0, a=0.1)]
+    t = youden_threshold(rows)
+    assert 0.1 < t <= 0.3
+
+def test_metrics_at_threshold_on_max_score():
+    rows = [S(1, a=0.3), S(1, a=0.05), S(0, a=0.1)]
+    m = metrics_at(rows, 0.2)
+    assert (m["tp"], m["fn"], m["fp"], m["tn"]) == (1, 1, 0, 1)
+
+def test_logreg_learns_separable_data():
+    X = [[0.1, 0.2], [0.2, 0.1], [0.8, 0.9], [0.9, 0.7]]
+    y = [0, 0, 1, 1]
+    w = fit_logreg(X, y)
+    p = predict_logreg(w, [[0.1, 0.1], [0.9, 0.9]])
+    assert p[0] < 0.5 < p[1]

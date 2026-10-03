@@ -39,3 +39,30 @@ def test_empty_text_does_not_call_model(monkeypatch):
 
 def test_all_five_checks_defined():
     assert list(checks.CHECKS) == ["AST01", "AST02", "AST03", "AST04", "AST05"]
+
+def test_ast10_split_makes_one_call_per_check(monkeypatch):
+    calls = []
+    def fake(s, q):
+        calls.append(list(q)); return {k: 0.9 if k == "AST02" else 0.1 for k in q}
+    monkeypatch.setattr(methods, "ask", fake)
+    v = methods.ast10_split("skill")
+    assert calls == [["AST01"], ["AST02"], ["AST03"], ["AST04"], ["AST05"]]
+    assert v["flag"] is True and v["scores"]["AST02"] == 0.9
+
+def test_ast10_split_empty_text_no_calls(monkeypatch):
+    monkeypatch.setattr(methods, "ask", lambda *a: (_ for _ in ()).throw(AssertionError("called")))
+    assert methods.ast10_split(" ")["flag"] is None
+
+def test_naive_x5_batches_five_paraphrases_in_one_call(monkeypatch):
+    seen = []
+    monkeypatch.setattr(methods, "ask", lambda s, q: seen.append(list(q)) or {k: 0.6 if k == "n3" else 0.1 for k in q})
+    v = methods.naive_x5("skill")
+    assert seen == [["n1", "n2", "n3", "n4", "n5"]] and v["flag"] is True
+
+def test_paraphrases_are_distinct_and_hashed():
+    qs = [v[0] for v in checks.NAIVE5.values()]
+    assert len(set(qs)) == 5
+    assert "n1" in checks.prompt_hashes()
+
+def test_new_methods_registered():
+    assert {"ast10-split", "naive-x5"} <= set(methods.METHODS)

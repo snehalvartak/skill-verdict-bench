@@ -15,7 +15,7 @@ def regex(skill_text):
     return {"flag": bool(hits), "evidence": ",".join(hits), "scores": {}}
 
 from msd.systemone import ask
-from msd.checks import CHECKS, NAIVE, THRESHOLD, truncate
+from msd.checks import CHECKS, NAIVE, NAIVE5, THRESHOLD, truncate
 
 def _empty():
     return {"flag": None, "evidence": "empty", "scores": {}}
@@ -38,4 +38,21 @@ def naive_llm(skill_text):
     scores = ask(text, NAIVE)
     return {"flag": _decide(scores), "evidence": "truncated" if cut else "", "scores": scores}
 
-METHODS = {"ast10": ast10, "naive-llm": naive_llm, "regex": regex}
+def naive_x5(skill_text):
+    if not skill_text.strip():
+        return _empty()
+    text, cut = truncate(skill_text)
+    scores = ask(text, NAIVE5)
+    return {"flag": _decide(scores), "evidence": "truncated" if cut else "", "scores": scores}
+
+def ast10_split(skill_text):
+    if not skill_text.strip():
+        return _empty()
+    text, cut = truncate(skill_text)
+    scores = {}
+    for cid, q in CHECKS.items():
+        scores.update(ask(text, {cid: q}))
+    return {"flag": _decide(scores), "evidence": "truncated" if cut else "", "scores": scores}
+
+METHODS = {"ast10": ast10, "naive-llm": naive_llm, "regex": regex,
+           "ast10-split": ast10_split, "naive-x5": naive_x5}

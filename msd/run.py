@@ -21,9 +21,11 @@ def _read_done(pred):
     os.replace(tmp, pred)  # atomic: a kill mid-rewrite never loses the original
     return done
 
-def run(n=200, split="random", seed=0, methods=None, out_root="runs", df=None, resume=None):
-    methods = methods or list(METHODS)
-    df = sample(load(split) if df is None else df, n, seed)
+DEFAULT_METHODS = ["ast10", "naive-llm", "regex"]  # controls (ast10-split, naive-x5) are opt-in via --methods
+
+def run(n=200, split="random", part="test", seed=0, methods=None, out_root="runs", df=None, resume=None):
+    methods = methods or DEFAULT_METHODS
+    df = sample(load(split, part) if df is None else df, n, seed)
     if resume:
         out = pathlib.Path(resume)
         done = _read_done(out / "predictions.jsonl")
@@ -32,7 +34,7 @@ def run(n=200, split="random", seed=0, methods=None, out_root="runs", df=None, r
         out.mkdir(parents=True)
         done = set()
     cfg = {"model": "clef-flash", "model_digest": model_digest(), "prompt_hashes": prompt_hashes(),
-           "threshold": THRESHOLD, "seed": seed, "split": split, "n": n, "max_chars": MAX_CHARS,
+           "threshold": THRESHOLD, "seed": seed, "split": split, "part": part, "n": n, "max_chars": MAX_CHARS,
            "methods": methods, "sample_ids": list(df.benchmark_id)}
     if not resume:
         (out / "config.json").write_text(json.dumps(cfg, indent=2))
@@ -51,8 +53,9 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--n", type=int, default=200)
     p.add_argument("--split", default="random")
+    p.add_argument("--part", default="test", choices=["train", "validation", "test"])
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--methods", nargs="*")
     p.add_argument("--resume", help="run dir to continue (same --n/--seed/--split)")
     a = p.parse_args()
-    print(run(a.n, a.split, a.seed, a.methods, resume=a.resume))
+    print(run(a.n, a.split, a.part, a.seed, a.methods, resume=a.resume))

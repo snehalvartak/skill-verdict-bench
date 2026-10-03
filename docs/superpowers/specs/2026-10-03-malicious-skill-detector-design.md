@@ -64,7 +64,7 @@ Per method: precision, recall, F1, confusion matrix. Additionally:
 
 ## Known risks
 
-- clef-flash's `decision` capability may need a specific response format; first task is a smoke test through `/api/chat` before writing prompts.
+- clef-flash is a "system1" model called via `POST /v1/systemone` with `{model, state, questions:{<id>:{type:"noul", instructions, criteria:{true,false}}}}` (not `/api/chat`). Each AST check is one question (or all five as questions in one call); `state` is the skill text. The response shape is unverified: first task is a smoke test that records it before any code depends on it.
 - Very long skills truncated at a logged limit.
 - Text-only evaluation underestimates script-borne attacks.
 - Dataset label noise / template-generated malicious skills may inflate scores; report per-source where possible.

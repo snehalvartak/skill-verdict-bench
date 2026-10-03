@@ -3,3 +3,19 @@ __pycache__/
 data/
 runs/
 .superpowers/
+
+# secrets and local config
+.env
+.env.*
+*.pem
+*.key
+*.p12
+id_rsa*
+credentials*
+secrets*
+.claude/settings.local.json
+.superpowers/
+
+# misc
+.DS_Store
+.pytest_cache/

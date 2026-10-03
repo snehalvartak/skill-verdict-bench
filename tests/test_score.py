@@ -66,3 +66,24 @@ def test_logreg_learns_separable_data():
     w = fit_logreg(X, y)
     p = predict_logreg(w, [[0.1, 0.1], [0.9, 0.9]])
     assert p[0] < 0.5 < p[1]
+
+from msd.score import auc_diff_ci
+
+def P(i, label, score):
+    return {"benchmark_id": i, "label": label, "flag": None, "scores": {"a": score}, "attack_categories": []}
+
+def test_auc_diff_ci_identical_methods_contains_zero():
+    rows = [P(i, i % 2, (i * 7 % 10) / 10) for i in range(40)]
+    lo, hi = auc_diff_ci(rows, rows, n_boot=200, seed=0)
+    assert lo <= 0 <= hi
+
+def test_auc_diff_ci_clear_winner_is_positive():
+    good = [P(i, i % 2, 0.9 if i % 2 else 0.1) for i in range(40)]
+    chance = [P(i, i % 2, 0.5) for i in range(40)]
+    lo, hi = auc_diff_ci(good, chance, n_boot=200, seed=0)
+    assert lo > 0 and hi <= 0.5 + 1e-9
+
+def test_auc_diff_ci_pairs_by_benchmark_id_not_order():
+    a = [P(i, i % 2, 0.9 if i % 2 else 0.1) for i in range(20)]
+    lo, hi = auc_diff_ci(a, list(reversed(a)), n_boot=100, seed=0)
+    assert lo == hi == 0.0

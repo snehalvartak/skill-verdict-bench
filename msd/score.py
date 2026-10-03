@@ -103,3 +103,18 @@ def report(run_dir):
 
 if __name__ == "__main__":
     print(report(sys.argv[1]))
+
+def auc_diff_ci(rows_a, rows_b, n_boot=2000, seed=0):
+    """95% paired-bootstrap CI of AUC(a) - AUC(b). Rows are paired by benchmark_id."""
+    import random
+    a = {r["benchmark_id"]: r for r in rows_a}
+    b = {r["benchmark_id"]: r for r in rows_b}
+    ids = sorted(a.keys() & b.keys())
+    rng, diffs = random.Random(seed), []
+    for _ in range(n_boot):
+        pick = [ids[rng.randrange(len(ids))] for _ in ids]
+        da, db = auc([a[i] for i in pick]), auc([b[i] for i in pick])
+        if da is not None and db is not None:
+            diffs.append(da - db)
+    diffs.sort()
+    return diffs[int(0.025 * len(diffs))], diffs[int(0.975 * len(diffs)) - 1]

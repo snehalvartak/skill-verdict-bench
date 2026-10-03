@@ -10,6 +10,8 @@ This repo is an evaluation harness. It sends each skill's `SKILL.md` text to a l
 | `naive-llm` | A single "is this skill malicious?" question to the same model. |
 | `regex` | A keyword scanner (pipe-to-shell, secret paths, webhooks, concealment phrases). |
 
+Two opt-in controls, `naive-x5` (five generic paraphrases) and `ast10-split` (one call per check), isolate what drives `ast10`'s result: `--methods naive-x5 ast10-split`. Compare runs with `python -m msd.compare <run dirs>`.
+
 AST06 to AST10 (isolation, update drift, scanning, governance, cross-platform reuse) describe ecosystems, not a single skill's text, so they are left out on purpose.
 
 ## First result
@@ -22,7 +24,9 @@ Experiment 001, 200 skills (154 malicious, 46 benign), threshold 0.5:
 | naive-llm | 1.00 | 0.14 | 0.24 |
 | regex | 0.91 | 0.14 | 0.24 |
 
-The model's scores are low, so 0.5 is too strict. Ranked by score without a threshold, `ast10` reaches AUC 0.80 against 0.63 for `naive-llm`. That gap is confounded (`ast10` takes the maximum of five scores), and the controls are listed in the write-up. Details, caveats and an incident report are in [`docs/experiments/001-baseline-200.md`](docs/experiments/001-baseline-200.md). The experiment logs in `docs/experiments/` are written to double as blog material.
+The model's scores are low, so 0.5 is too strict. Ranked by score without a threshold, `ast10` reaches AUC 0.80 against 0.63 for `naive-llm`. That gap is confounded (`ast10` takes the maximum of five scores), and the controls are listed in the write-up. Details, caveats and an incident report are in [`docs/experiments/001-baseline-200.md`](docs/experiments/001-baseline-200.md).
+
+Experiment 002 ran the controls: with the max-of-five and batching held fixed, the AST10 questions still beat generic paraphrases by +0.12 AUC (95% CI +0.05 to +0.20). Batching does not change the aggregate ranking. See [`docs/experiments/002-controls.md`](docs/experiments/002-controls.md). The experiment logs in `docs/experiments/` are written to double as blog material.
 
 ## Run it
 
@@ -30,7 +34,7 @@ Requires Python 3.11+, [uv](https://docs.astral.sh/uv/) and a running [Ollama](h
 
 ```bash
 uv sync
-uv run pytest -q                                   # 32 tests, no Ollama needed
+uv run pytest -q                                   # 49 tests, no Ollama needed
 uv run python -m msd.run --n 200 --seed 0          # prints a run dir under runs/
 uv run python -m msd.score runs/<run_id>           # metrics tables
 uv run python -m msd.run --n 200 --seed 0 --resume runs/<run_id>   # continue a killed run
@@ -52,7 +56,8 @@ msd/checks.py      AST01 to AST05 questions, threshold, truncation limit
 msd/methods.py     ast10, naive-llm, regex
 msd/data.py        dataset download, split filter, stratified sampling
 msd/run.py         run methods over a sample, write predictions.jsonl + config.json
-msd/score.py       precision, recall, F1, per-check hit rates, recall by attack category
+msd/score.py       precision, recall, F1, AUC, bootstrap CIs, per-check hit rates, recall by category
+msd/compare.py     cross-method comparison tables for a set of run dirs
 docs/              spec, plan, experiment logs
 ```
 

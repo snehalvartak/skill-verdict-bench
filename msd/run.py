@@ -1,4 +1,4 @@
-import argparse, json, pathlib, time
+import argparse, json, os, pathlib, time
 from msd.checks import MAX_CHARS, THRESHOLD, prompt_hashes
 from msd.data import load, sample
 from msd.methods import METHODS
@@ -16,7 +16,9 @@ def _read_done(pred):
             continue  # unparseable rows are retried, not kept
         good.append(line)
         done.add((r["benchmark_id"], r["method"]))
-    pred.write_text("".join(l + "\n" for l in good))
+    tmp = pred.with_name(pred.name + ".tmp")
+    tmp.write_text("".join(l + "\n" for l in good))
+    os.replace(tmp, pred)  # atomic: a kill mid-rewrite never loses the original
     return done
 
 def run(n=200, split="random", seed=0, methods=None, out_root="runs", df=None, resume=None):

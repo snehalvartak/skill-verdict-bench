@@ -38,3 +38,14 @@ def test_resume_retries_unparseable_rows(tmp_path, monkeypatch):
     runmod.run(n=1, methods=["regex"], out_root=str(tmp_path), df=df, resume=out)
     rows = [json.loads(l) for l in pred.read_text().splitlines()]
     assert len(rows) == 1 and rows[0]["flag"] is True
+
+def test_resume_rewrite_is_atomic(tmp_path, monkeypatch):
+    import pytest
+    pred = tmp_path / "predictions.jsonl"
+    good = json.dumps({"benchmark_id": "a", "method": "regex", "flag": True, "label": 1})
+    pred.write_text(good + "\n" + '{"torn')
+    def boom(*a, **k): raise OSError("killed during replace")
+    monkeypatch.setattr(runmod.os, "replace", boom)
+    with pytest.raises(OSError):
+        runmod._read_done(pred)
+    assert pred.read_text() == good + "\n" + '{"torn'  # original untouched

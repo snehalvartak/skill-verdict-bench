@@ -9,7 +9,7 @@ Splitting detection into one question per checkable OWASP AST10 risk (`ast10`) f
 ## Setup
 
 - Model: `clef-flash`, digest `2aa4d39fd93b`, via `POST /v1/systemone` (see 000).
-- Data: MaliciousSkillBench, `random` split, `test` part (1,947 skills with exact text). Sample of 200, label-stratified, seed 0: **154 malicious, 46 benign**. Mean skill length about 7,000 characters; none truncated (limit 60,000).
+- Data: MaliciousSkillBench, `random` split, `test` part (1,947 skills with exact text). Sample of 200, label-stratified, seed 0: **154 malicious, 46 benign**. Mean skill length 5,772 characters in the sample (6,963 across the whole test split); none truncated (limit 60,000).
 - Methods: `ast10` = 5 questions (AST01 to AST05) in one call, flagged if any score is at least the threshold; `naive-llm` = 1 question; `regex` = 5 keyword patterns.
 - The model returns P(true) in [0, 1] (the `noul` score). Default threshold 0.5.
 - Prompt hashes are in the run's `config.json`.
@@ -25,6 +25,8 @@ Splitting detection into one question per checkable OWASP AST10 risk (`ast10`) f
 Neither LLM method produced a false positive, and both missed most malicious skills. The model is conservative: its scores rarely reach 0.5.
 
 ## Threshold-free view (AUC of the max score)
+
+The AUC and threshold-sweep tables were computed ad hoc from `predictions.jsonl` and are not yet in `score.py`; moving them into the scorer is the first follow-up so they are reproducible.
 
 | method | AUC |
 |---|---|

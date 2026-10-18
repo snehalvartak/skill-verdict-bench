@@ -1,6 +1,6 @@
 import json, pathlib
 import pytest
-from msd import systemone
+from svb import systemone
 
 FIX = pathlib.Path(__file__).parent / "fixtures" / "systemone_hello.json"
 

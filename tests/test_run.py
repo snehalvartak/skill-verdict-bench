@@ -1,5 +1,5 @@
 import json, pandas as pd
-from msd import run as runmod
+from svb import run as runmod
 
 def test_run_writes_predictions_and_config(tmp_path, monkeypatch):
     monkeypatch.setattr(runmod, "model_digest", lambda: "sha-test")

@@ -1,6 +1,6 @@
-"""Compare methods across run dirs: python -m msd.compare runs/A runs/B ..."""
+"""Compare methods across run dirs: python -m svb.compare runs/A runs/B ..."""
 import json, sys
-from msd.score import auc, auc_by_check, auc_diff_ci, metrics_at, youden_threshold
+from svb.score import auc, auc_by_check, auc_diff_ci, metrics_at, youden_threshold
 
 PAIRS = [("ast10", "naive-llm"), ("ast10", "naive-x5"), ("naive-x5", "naive-llm"),
          ("ast10-split", "ast10"), ("ast10-split", "naive-x5")]

@@ -1,6 +1,6 @@
 import json, math, pathlib, sys
 from collections import defaultdict
-from msd.checks import THRESHOLD
+from svb.checks import THRESHOLD
 
 def metrics(rows):
     ok = [r for r in rows if r["flag"] is not None]

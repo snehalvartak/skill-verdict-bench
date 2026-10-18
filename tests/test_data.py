@@ -1,5 +1,5 @@
 import pandas as pd
-from msd.data import sample
+from svb.data import sample
 
 def _df(n_mal, n_ben):
     return pd.DataFrame({"benchmark_id": range(n_mal + n_ben),
@@ -18,7 +18,7 @@ def test_sample_larger_than_class_takes_all():
     assert (s.label == 0).sum() == 3
 
 def test_failed_download_leaves_no_cache_file(tmp_path, monkeypatch):
-    from msd import data
+    from svb import data
     import pytest
     monkeypatch.setattr(data, "DATA", tmp_path)
     def bad(url, dest):
@@ -30,7 +30,7 @@ def test_failed_download_leaves_no_cache_file(tmp_path, monkeypatch):
     assert not (tmp_path / "primary.parquet").exists()
 
 def test_load_filters_split_and_drops_missing_text(tmp_path, monkeypatch):
-    from msd import data
+    from svb import data
     primary = pd.DataFrame({
         "benchmark_id": ["a", "b", "c", "d"], "label": [1, 0, 1, 0],
         "source_id": ["s1"] * 4, "skill_text": ["t", "t", None, "t"],

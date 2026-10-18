@@ -1,8 +1,8 @@
 import argparse, json, os, pathlib, time
-from msd.checks import MAX_CHARS, THRESHOLD, prompt_hashes
-from msd.data import load, sample
-from msd.methods import METHODS
-from msd.systemone import model_digest
+from svb.checks import MAX_CHARS, THRESHOLD, prompt_hashes
+from svb.data import load, sample
+from svb.methods import METHODS
+from svb.systemone import model_digest
 
 def _read_done(pred):
     """Return {(benchmark_id, method)} already scored; drop torn and unparseable lines."""

@@ -1,6 +1,6 @@
 # 002 — Is it the AST10 content, the max of five scores, or batching?
 
-Date: 2026-10-03. Runs: `runs/20261003-115058` (001: `ast10`, `naive-llm`, `regex`) and `runs/20261003-161714` (this experiment: `naive-x5`, `ast10-split`). Same 200 skills, same seed, same model digest as 001 (154 malicious, 46 benign). Reproduce the tables with `python -m msd.compare <both run dirs>`.
+Date: 2026-10-03. Runs: `runs/20261003-115058` (001: `ast10`, `naive-llm`, `regex`) and `runs/20261003-161714` (this experiment: `naive-x5`, `ast10-split`). Same 200 skills, same seed, same model digest as 001 (154 malicious, 46 benign). Reproduce the tables with `python -m svb.compare <both run dirs>`.
 
 ## Question
 
@@ -68,6 +68,6 @@ At threshold 0.1, `ast10` has F1 0.87, but flagging every skill gives precision 
 
 ## Next
 
-1. Score about 100 skills each of `train` and `validation` with `ast10-split`, then fit the logistic regression on the five scores and choose the threshold on validation (the code is in `msd/score.py`).
+1. Score about 100 skills each of `train` and `validation` with `ast10-split`, then fit the logistic regression on the five scores and choose the threshold on validation (the code is in `svb/score.py`).
 2. Include the bundled scripts, which the Hugging Face copy omits and the GitHub `packages/` archives hold.
 3. `--split source_disjoint` and a larger `--n`.

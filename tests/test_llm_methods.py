@@ -1,4 +1,4 @@
-from msd import methods, checks
+from svb import methods, checks
 
 def test_ast10_flags_if_any_check_over_threshold(monkeypatch):
     monkeypatch.setattr(methods, "ask", lambda s, q: {k: 0.9 if k == "AST03" else 0.1 for k in q})

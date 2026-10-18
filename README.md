@@ -42,6 +42,8 @@ uv run python -m msd.run --n 200 --seed 0 --resume runs/<run_id>   # continue a 
 
 The first run downloads the benchmark files into `data/` (git-ignored). A run takes roughly 25 seconds per skill for all three methods.
 
+Runs created before `--part` existed (including experiment 001) have no `part` in their `config.json`, so `--resume` refuses them. They can still be scored; to continue one, start a fresh run.
+
 ## Dataset and attribution
 
 The benchmark is **MaliciousSkillBench** ([Hugging Face](https://huggingface.co/datasets/ProtectSkills/MaliciousSkillBench), [arXiv 2608.19901](https://arxiv.org/abs/2608.19901)), released under CC-BY-4.0 by its authors. This repo downloads it on demand and does not redistribute it. If you use results from this harness, cite the dataset and its paper. Several upstream sources feed that benchmark; see its README and `source_registry.csv` for their attribution.

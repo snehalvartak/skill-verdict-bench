@@ -26,7 +26,7 @@ Neither LLM method produced a false positive, and both missed most malicious ski
 
 ## Threshold-free view (AUC of the max score)
 
-The AUC and threshold-sweep tables were computed ad hoc from `predictions.jsonl` and are not yet in `score.py`; moving them into the scorer is the first follow-up so they are reproducible.
+The AUC and threshold-sweep tables were first computed ad hoc from `predictions.jsonl`. `score.py` now prints both (AUC of the max score per method, AUC per check, and the sweep below), so they can be regenerated from the run directory.
 
 | method | AUC |
 |---|---|

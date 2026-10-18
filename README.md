@@ -34,10 +34,10 @@ Requires Python 3.11+, [uv](https://docs.astral.sh/uv/) and a running [Ollama](h
 
 ```bash
 uv sync
-uv run pytest -q                                   # 49 tests, no Ollama needed
+uv run pytest -q                                   # 52 tests, no Ollama needed
 uv run python -m msd.run --n 200 --seed 0          # prints a run dir under runs/
-uv run python -m msd.score runs/<run_id>           # metrics tables
-uv run python -m msd.run --n 200 --seed 0 --resume runs/<run_id>   # continue a killed run
+uv run python -m msd.score runs/<run_id>           # metrics, AUC and threshold-sweep tables
+uv run python -m msd.run --n 200 --seed 0 --resume runs/<run_id>   # continue a killed run (refuses if sample, prompts or model changed)
 ```
 
 The first run downloads the benchmark files into `data/` (git-ignored). A run takes roughly 25 seconds per skill for all three methods.
@@ -56,7 +56,7 @@ msd/checks.py      AST01 to AST05 questions, threshold, truncation limit
 msd/methods.py     ast10, naive-llm, regex
 msd/data.py        dataset download, split filter, stratified sampling
 msd/run.py         run methods over a sample, write predictions.jsonl + config.json
-msd/score.py       precision, recall, F1, AUC, bootstrap CIs, per-check hit rates, recall by category
+msd/score.py       precision, recall, F1, AUC, threshold sweep, bootstrap CIs, per-check hit rates and AUC, recall by attack category
 msd/compare.py     cross-method comparison tables for a set of run dirs
 docs/              spec, plan, experiment logs
 ```

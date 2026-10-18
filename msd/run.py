@@ -23,21 +23,28 @@ def _read_done(pred):
 
 DEFAULT_METHODS = ["ast10", "naive-llm", "regex"]  # controls (ast10-split, naive-x5) are opt-in via --methods
 
+def _check_resume(saved, cfg):
+    """Refuse to append to a run made with a different sample, prompts, model or settings."""
+    # ponytail: methods may differ; a resume can add or skip methods without mixing runs
+    bad = [k for k in cfg if k != "methods" and saved.get(k) != cfg[k]]
+    if bad:
+        raise ValueError(f"resume config differs from the saved run in: {', '.join(bad)}")
+
 def run(n=200, split="random", part="test", seed=0, methods=None, out_root="runs", df=None, resume=None):
     methods = methods or DEFAULT_METHODS
     df = sample(load(split, part) if df is None else df, n, seed)
+    cfg = {"model": "clef-flash", "model_digest": model_digest(), "prompt_hashes": prompt_hashes(),
+           "threshold": THRESHOLD, "seed": seed, "split": split, "part": part, "n": n, "max_chars": MAX_CHARS,
+           "methods": methods, "sample_ids": list(df.benchmark_id)}
     if resume:
         out = pathlib.Path(resume)
+        _check_resume(json.loads((out / "config.json").read_text()), cfg)
         done = _read_done(out / "predictions.jsonl")
     else:
         out = pathlib.Path(out_root) / time.strftime("%Y%m%d-%H%M%S")
         out.mkdir(parents=True)
-        done = set()
-    cfg = {"model": "clef-flash", "model_digest": model_digest(), "prompt_hashes": prompt_hashes(),
-           "threshold": THRESHOLD, "seed": seed, "split": split, "part": part, "n": n, "max_chars": MAX_CHARS,
-           "methods": methods, "sample_ids": list(df.benchmark_id)}
-    if not resume:
         (out / "config.json").write_text(json.dumps(cfg, indent=2))
+        done = set()
     with open(out / "predictions.jsonl", "a") as f:
         for _, r in df.iterrows():
             for m in methods:

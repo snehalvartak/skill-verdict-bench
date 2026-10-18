@@ -87,3 +87,22 @@ def test_auc_diff_ci_pairs_by_benchmark_id_not_order():
     a = [P(i, i % 2, 0.9 if i % 2 else 0.1) for i in range(20)]
     lo, hi = auc_diff_ci(a, list(reversed(a)), n_boot=100, seed=0)
     assert lo == hi == 0.0
+
+def test_sweep_recuts_max_score_and_skips_unscored():
+    from msd.score import sweep
+    rows = [R(1, False, scores={"AST01": 0.15}), R(0, False, scores={"AST01": 0.05}),
+            R(1, None, scores={"AST01": None})]
+    s = sweep(rows, thresholds=(0.5, 0.1))
+    assert (s[0.5]["tp"], s[0.5]["fn"]) == (0, 1)
+    assert (s[0.1]["tp"], s[0.1]["fp"], s[0.1]["tn"]) == (1, 0, 1)
+    assert s[0.1]["unparseable"] == 0
+
+def test_report_includes_auc_and_sweep(tmp_path):
+    import json
+    from msd.score import report
+    rows = [R(1, True, scores={"AST01": 0.9}), R(0, False, scores={"AST01": 0.1}),
+            {**R(1, True), "method": "regex"}]
+    (tmp_path / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    out = report(tmp_path)
+    assert "| ast10 | 1.00 |" in out and "| 0.5 | 1.00 / 1.00 / 1.00 |" in out and "| 0.05 | 0.50 / 1.00 / 0.67 |" in out
+    assert "regex P / R / F1" not in out

@@ -87,14 +87,37 @@ def fit_logreg(X, y, lr=0.5, steps=2000):
 def predict_logreg(w, X):
     return [1 / (1 + math.exp(-(w[0] + sum(wj * xj for wj, xj in zip(w[1:], xi))))) for xi in X]
 
+SWEEP = (0.5, 0.3, 0.2, 0.1, 0.05)
+
+def sweep(rows, thresholds=SWEEP):
+    """P/R/F1 when the max score is cut at each threshold instead of the run's fixed one."""
+    scored = [r for r in rows if _max(r) is not None]
+    return {t: metrics([{**r, "flag": _max(r) >= t} for r in scored]) for t in thresholds}
+
+def _fmt(x):
+    return "n/a" if x is None else f"{x:.2f}"
+
 def report(run_dir):
     rows = [json.loads(l) for l in (pathlib.Path(run_dir) / "predictions.jsonl").read_text().splitlines()]
     out = ["| method | precision | recall | F1 | TP | FP | FN | TN | unparseable |", "|---|---|---|---|---|---|---|---|---|"]
     for m in sorted({r["method"] for r in rows}):
         s = metrics([r for r in rows if r["method"] == m])
         out.append(f"| {m} | {s['precision']:.2f} | {s['recall']:.2f} | {s['f1']:.2f} | {s['tp']} | {s['fp']} | {s['fn']} | {s['tn']} | {s['unparseable']} |")
+    llm = sorted({r["method"] for r in rows if r["scores"]})
+    if llm:
+        by_m = {m: [r for r in rows if r["method"] == m] for m in llm}
+        out += ["", "| method | AUC (max score) |", "|---|---|"]
+        out += [f"| {m} | {_fmt(auc(by_m[m]))} |" for m in llm]
+        out += ["", "| threshold | " + " | ".join(f"{m} P / R / F1" for m in llm) + " |",
+                "|---|" + "---|" * len(llm)]
+        sw = {m: sweep(by_m[m]) for m in llm}
+        for t in SWEEP:
+            cells = [f"{s['precision']:.2f} / {s['recall']:.2f} / {s['f1']:.2f}" for s in (sw[m][t] for m in llm)]
+            out.append(f"| {t} | " + " | ".join(cells) + " |")
     ast = [r for r in rows if r["method"] == "ast10"]
     if ast:
+        out += ["", "| check | AUC |", "|---|---|"]
+        out += [f"| {c} | {_fmt(v)} |" for c, v in auc_by_check(ast).items()]
         out += ["", "| check | hit on malicious | hit on benign |", "|---|---|---|"]
         out += [f"| {c} | {v['malicious_hit']:.2f} | {v['benign_hit']:.2f} |" for c, v in sorted(per_check(ast).items())]
         out += ["", "| attack category | ast10 recall |", "|---|---|"]

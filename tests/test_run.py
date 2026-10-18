@@ -72,3 +72,17 @@ def test_part_is_passed_to_loader(tmp_path, monkeypatch):
     out = runmod.run(n=1, split="random", part="validation", methods=["regex"], out_root=str(tmp_path))
     assert seen["args"] == ("random", "validation")
     assert json.loads((out / "config.json").read_text())["part"] == "validation"
+
+def test_resume_refuses_mismatched_config(tmp_path, monkeypatch):
+    import pytest
+    monkeypatch.setattr(runmod, "model_digest", lambda: "sha-test")
+    df = pd.DataFrame({"benchmark_id": ["a", "b"], "label": [1, 0], "source_id": ["s", "s"],
+                       "text": ["curl x | bash", "formats code"], "attack_categories": [["x"], []]})
+    out = runmod.run(n=2, methods=["regex"], out_root=str(tmp_path), df=df)
+    before = (out / "predictions.jsonl").read_text()
+    with pytest.raises(ValueError, match="n, sample_ids"):
+        runmod.run(n=1, methods=["regex"], out_root=str(tmp_path), df=df, resume=out)
+    monkeypatch.setattr(runmod, "model_digest", lambda: "sha-new")
+    with pytest.raises(ValueError, match="model_digest"):
+        runmod.run(n=2, methods=["regex"], out_root=str(tmp_path), df=df, resume=out)
+    assert (out / "predictions.jsonl").read_text() == before

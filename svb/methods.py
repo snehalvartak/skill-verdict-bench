@@ -14,8 +14,8 @@ def regex(skill_text):
     hits = [k for k, p in _COMPILED.items() if p.search(skill_text)]
     return {"flag": bool(hits), "evidence": ",".join(hits), "scores": {}}
 
-from msd.systemone import ask
-from msd.checks import CHECKS, NAIVE, NAIVE5, THRESHOLD, truncate
+from svb.systemone import ask
+from svb.checks import CHECKS, NAIVE, NAIVE5, THRESHOLD, truncate
 
 def _empty():
     return {"flag": None, "evidence": "empty", "scores": {}}

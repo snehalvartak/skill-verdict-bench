@@ -1,4 +1,4 @@
-from msd.score import metrics, per_check, by_category
+from svb.score import metrics, per_check, by_category
 
 def R(label, flag, **kw):
     return {"label": label, "flag": flag, "method": "ast10", "scores": {}, "attack_categories": [], **kw}
@@ -30,7 +30,7 @@ def test_by_category_recall():
     rows = [R(1, True, attack_categories=["Exfil"]), R(1, False, attack_categories=["Exfil"])]
     assert by_category(rows) == {"Exfil": 0.5}
 
-from msd.score import auc, auc_by_check, youden_threshold, metrics_at, fit_logreg, predict_logreg
+from svb.score import auc, auc_by_check, youden_threshold, metrics_at, fit_logreg, predict_logreg
 
 def S(label, **scores):
     return R(label, None, scores=scores)
@@ -67,7 +67,7 @@ def test_logreg_learns_separable_data():
     p = predict_logreg(w, [[0.1, 0.1], [0.9, 0.9]])
     assert p[0] < 0.5 < p[1]
 
-from msd.score import auc_diff_ci
+from svb.score import auc_diff_ci
 
 def P(i, label, score):
     return {"benchmark_id": i, "label": label, "flag": None, "scores": {"a": score}, "attack_categories": []}
@@ -89,7 +89,7 @@ def test_auc_diff_ci_pairs_by_benchmark_id_not_order():
     assert lo == hi == 0.0
 
 def test_sweep_recuts_max_score_and_skips_unscored():
-    from msd.score import sweep
+    from svb.score import sweep
     rows = [R(1, False, scores={"AST01": 0.15}), R(0, False, scores={"AST01": 0.05}),
             R(1, None, scores={"AST01": None})]
     s = sweep(rows, thresholds=(0.5, 0.1))
@@ -99,7 +99,7 @@ def test_sweep_recuts_max_score_and_skips_unscored():
 
 def test_report_includes_auc_and_sweep(tmp_path):
     import json
-    from msd.score import report
+    from svb.score import report
     rows = [R(1, True, scores={"AST01": 0.9}), R(0, False, scores={"AST01": 0.1}),
             {**R(1, True), "method": "regex"}]
     (tmp_path / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))

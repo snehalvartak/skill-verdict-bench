@@ -10,7 +10,7 @@ This repo is an evaluation harness. It sends each skill's `SKILL.md` text to a l
 | `naive-llm` | A single "is this skill malicious?" question to the same model. |
 | `regex` | A keyword scanner (pipe-to-shell, secret paths, webhooks, concealment phrases). |
 
-Two opt-in controls, `naive-x5` (five generic paraphrases) and `ast10-split` (one call per check), isolate what drives `ast10`'s result: `--methods naive-x5 ast10-split`. Compare runs with `python -m msd.compare <run dirs>`.
+Two opt-in controls, `naive-x5` (five generic paraphrases) and `ast10-split` (one call per check), isolate what drives `ast10`'s result: `--methods naive-x5 ast10-split`. Compare runs with `python -m svb.compare <run dirs>`.
 
 AST06 to AST10 (isolation, update drift, scanning, governance, cross-platform reuse) describe ecosystems, not a single skill's text, so they are left out on purpose.
 
@@ -35,9 +35,9 @@ Requires Python 3.11+, [uv](https://docs.astral.sh/uv/) and a running [Ollama](h
 ```bash
 uv sync
 uv run pytest -q                                   # 52 tests, no Ollama needed
-uv run python -m msd.run --n 200 --seed 0          # prints a run dir under runs/
-uv run python -m msd.score runs/<run_id>           # metrics, AUC and threshold-sweep tables
-uv run python -m msd.run --n 200 --seed 0 --resume runs/<run_id>   # continue a killed run (refuses if sample, prompts or model changed)
+uv run python -m svb.run --n 200 --seed 0          # prints a run dir under runs/
+uv run python -m svb.score runs/<run_id>           # metrics, AUC and threshold-sweep tables
+uv run python -m svb.run --n 200 --seed 0 --resume runs/<run_id>   # continue a killed run (refuses if sample, prompts or model changed)
 ```
 
 The first run downloads the benchmark files into `data/` (git-ignored). A run takes roughly 25 seconds per skill for all three methods.
@@ -51,13 +51,13 @@ The dataset contains real malicious skill text. Treat it as data to read, never 
 ## Layout
 
 ```
-msd/systemone.py   Ollama client for /v1/systemone
-msd/checks.py      AST01 to AST05 questions, threshold, truncation limit
-msd/methods.py     ast10, naive-llm, regex
-msd/data.py        dataset download, split filter, stratified sampling
-msd/run.py         run methods over a sample, write predictions.jsonl + config.json
-msd/score.py       precision, recall, F1, AUC, threshold sweep, bootstrap CIs, per-check hit rates and AUC, recall by attack category
-msd/compare.py     cross-method comparison tables for a set of run dirs
+svb/systemone.py   Ollama client for /v1/systemone
+svb/checks.py      AST01 to AST05 questions, threshold, truncation limit
+svb/methods.py     ast10, naive-llm, regex
+svb/data.py        dataset download, split filter, stratified sampling
+svb/run.py         run methods over a sample, write predictions.jsonl + config.json
+svb/score.py       precision, recall, F1, AUC, threshold sweep, bootstrap CIs, per-check hit rates and AUC, recall by attack category
+svb/compare.py     cross-method comparison tables for a set of run dirs
 docs/              spec, plan, experiment logs
 ```
 

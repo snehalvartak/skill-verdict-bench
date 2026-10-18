@@ -86,3 +86,13 @@ def test_resume_refuses_mismatched_config(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="model_digest"):
         runmod.run(n=2, methods=["regex"], out_root=str(tmp_path), df=df, resume=out)
     assert (out / "predictions.jsonl").read_text() == before
+
+def test_exclude_drops_skills_from_earlier_runs(tmp_path, monkeypatch):
+    monkeypatch.setattr(runmod, "model_digest", lambda: "d")
+    df = pd.DataFrame({"benchmark_id": ["a", "b", "c", "d"], "label": [1, 0, 1, 0], "source_id": ["s"] * 4,
+                       "text": ["t"] * 4, "attack_categories": [[]] * 4})
+    seen = tmp_path / "seen"; seen.mkdir()
+    (seen / "config.json").write_text(json.dumps({"sample_ids": ["a", "b"]}))
+    out = runmod.run(n=4, methods=["regex"], out_root=str(tmp_path), df=df, exclude=[seen])
+    assert json.loads((out / "config.json").read_text())["sample_ids"] == ["c", "d"]
+    assert "exclude" not in json.loads((out / "config.json").read_text())

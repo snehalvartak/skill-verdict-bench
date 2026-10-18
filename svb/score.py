@@ -141,3 +141,14 @@ def auc_diff_ci(rows_a, rows_b, n_boot=2000, seed=0):
             diffs.append(da - db)
     diffs.sort()
     return diffs[int(0.025 * len(diffs))], diffs[int(0.975 * len(diffs)) - 1]
+
+def bootstrap_ci(rows, stat, n_boot=2000, seed=0):
+    """95% percentile-bootstrap CI of stat(rows); resamples where stat is None are dropped."""
+    import random
+    rng, vals = random.Random(seed), []
+    for _ in range(n_boot):
+        v = stat([rows[rng.randrange(len(rows))] for _ in rows])
+        if v is not None:
+            vals.append(v)
+    vals.sort()
+    return vals[int(0.025 * len(vals))], vals[int(0.975 * len(vals)) - 1]

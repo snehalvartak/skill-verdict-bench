@@ -21,6 +21,7 @@ def _read_done(pred):
     os.replace(tmp, pred)  # atomic: a kill mid-rewrite never loses the original
     return done
 
+MAX_FAILED_IN_A_ROW = 10  # ponytail: a dead model fails every call; a few flaky ones never reach 10 in a row
 DEFAULT_METHODS = ["ast10", "naive-llm", "regex"]  # controls (ast10-split, naive-x5) are opt-in via --methods
 
 def _check_resume(saved, cfg):
@@ -47,15 +48,19 @@ def run(n=200, split="random", part="test", seed=0, methods=None, out_root="runs
         out.mkdir(parents=True)
         (out / "config.json").write_text(json.dumps(cfg, indent=2))
         done = set()
+    failed = 0
     with open(out / "predictions.jsonl", "a") as f:
         for _, r in df.iterrows():
             for m in methods:
                 if (r.benchmark_id, m) in done:
                     continue
                 v = METHODS[m](r.text)
+                failed = failed + 1 if v["scores"] and all(x is None for x in v["scores"].values()) else 0
                 f.write(json.dumps({"benchmark_id": r.benchmark_id, "label": int(r.label), "method": m,
                                     **v, "attack_categories": [str(c) for c in r.attack_categories]}) + "\n")
                 f.flush()
+                if failed >= MAX_FAILED_IN_A_ROW:
+                    raise RuntimeError(f"{failed} model calls failed in a row; fix the model, then --resume {out}")
     return out
 
 if __name__ == "__main__":

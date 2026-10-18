@@ -96,3 +96,16 @@ def test_exclude_drops_skills_from_earlier_runs(tmp_path, monkeypatch):
     out = runmod.run(n=4, methods=["regex"], out_root=str(tmp_path), df=df, exclude=[seen])
     assert json.loads((out / "config.json").read_text())["sample_ids"] == ["c", "d"]
     assert "exclude" not in json.loads((out / "config.json").read_text())
+
+def test_run_aborts_after_consecutive_failed_calls(tmp_path, monkeypatch):
+    import pytest
+    monkeypatch.setattr(runmod, "model_digest", lambda: "d")
+    dead = lambda t: {"flag": None, "evidence": "", "scores": {"AST01": None, "AST02": None}}
+    monkeypatch.setattr(runmod, "METHODS", {"ast10-split": dead})
+    n = runmod.MAX_FAILED_IN_A_ROW + 5
+    df = pd.DataFrame({"benchmark_id": [f"s{i:02d}" for i in range(n)], "label": [i % 2 for i in range(n)],
+                       "source_id": ["s"] * n, "text": ["t"] * n, "attack_categories": [[]] * n})
+    with pytest.raises(RuntimeError, match="calls failed in a row"):
+        runmod.run(n=n, methods=["ast10-split"], out_root=str(tmp_path), df=df)
+    out = next(p for p in tmp_path.iterdir())
+    assert len((out / "predictions.jsonl").read_text().splitlines()) == runmod.MAX_FAILED_IN_A_ROW

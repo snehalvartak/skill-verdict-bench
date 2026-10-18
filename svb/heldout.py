@@ -13,8 +13,13 @@ def load_run(d, part, method="ast10-split"):
     rows = [r for r in map(json.loads, (d / "predictions.jsonl").read_text().splitlines()) if r["method"] == method]
     if not rows:
         raise ValueError(f"{d} has no {method} predictions")
-    if {r["label"] for r in rows} != {0, 1}:
-        raise ValueError(f"{d} needs both malicious and benign skills")
+    ids = [r["benchmark_id"] for r in rows]
+    if len(ids) != len(set(ids)):
+        raise ValueError(f"{d} has duplicate {method} rows")
+    if set(ids) != set(cfg["sample_ids"]):
+        raise ValueError(f"{d} is incomplete: {len(set(cfg['sample_ids']) - set(ids))} sampled skills have no {method} row")
+    if {r["label"] for r in rows if any(v is not None for v in r["scores"].values())} != {0, 1}:
+        raise ValueError(f"{d} needs both malicious and benign skills with scores")
     return cfg, rows
 
 def check_compatible(cfgs):
@@ -49,6 +54,8 @@ def rates(rows, t):
 
 def evaluate(train, val, test, n_boot=2000, seed=0):
     fit = [r for r in train if _full(r)]
+    if not fit:
+        raise ValueError("no fully scored train rows to fit the logistic regression on")
     # ponytail: unweighted, unregularised fit on 5 features; Youden on validation absorbs class imbalance
     w = fit_logreg([_full(r) for r in fit], [r["label"] for r in fit])
     combiners = {
@@ -56,15 +63,18 @@ def evaluate(train, val, test, n_boot=2000, seed=0):
         "AST04": lambda r: r["scores"].get("AST04"),
         "logreg": lambda r: None if _full(r) is None else predict_logreg(w, [_full(r)])[0],
     }
+    scored = {name: as_rows(test, f) for name, f in combiners.items()}
+    # compare every combiner on the skills all of them could score, so paired differences are like for like
+    common = set.intersection(*({r["benchmark_id"] for r in rs if r["scores"]} for rs in scored.values()))
     res = {}
     for name, f in combiners.items():
         t = youden_threshold(as_rows(val, f))
-        rs = as_rows(test, f)
+        rs = [r if r["benchmark_id"] in common else {**r, "scores": {}} for r in scored[name]]
         tpr, fpr = rates(rs, t)
         res[name] = {"threshold": t, "auc": auc(rs), "auc_ci": bootstrap_ci(rs, auc, n_boot, seed),
                      "tpr": tpr, "tpr_ci": bootstrap_ci(rs, lambda x: rates(x, t)[0], n_boot, seed),
                      "fpr": fpr, "fpr_ci": bootstrap_ci(rs, lambda x: rates(x, t)[1], n_boot, seed),
-                     "unscored": sum(not r["scores"] for r in rs), "rows": rs}
+                     "unscored": sum(not r["scores"] for r in scored[name]), "rows": rs}
     return res, w
 
 def main(argv=None):

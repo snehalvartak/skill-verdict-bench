@@ -101,3 +101,29 @@ def test_main_prints_tables(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "| logreg | " in out and "| logreg - max | " in out and "| AST04 | " in out
     assert "test skills: 20 (10 malicious, 10 benign)" in out
+
+def test_load_run_needs_both_classes_among_scored_rows(tmp_path):
+    nones = {c: None for c in heldout.CHECK_IDS}
+    d = make_run(tmp_path / "r", "validation", [row("a", 1), row("b", 0, **nones)])
+    with pytest.raises(ValueError, match="both malicious and benign"):
+        heldout.load_run(d, "validation")
+
+def test_load_run_refuses_incomplete_or_duplicated_runs(tmp_path):
+    d = make_run(tmp_path / "r", "train", TWO, ids=["a", "b", "c"])
+    with pytest.raises(ValueError, match="incomplete"):
+        heldout.load_run(d, "train")
+    d2 = make_run(tmp_path / "r2", "train", TWO + [row("a", 1)])
+    with pytest.raises(ValueError, match="duplicate"):
+        heldout.load_run(d2, "train")
+
+def test_evaluate_refuses_train_with_no_fully_scored_rows():
+    train = [row("t0", 1, AST02=None), row("t1", 0, AST03=None)]
+    with pytest.raises(ValueError, match="no fully scored train rows"):
+        heldout.evaluate(train, signal_in_ast04("v"), signal_in_ast04("x"), n_boot=10)
+
+def test_combiners_are_compared_on_the_same_skills():
+    test = signal_in_ast04("x") + [row("xn", 0, AST02=None)]   # max can score it, logreg can't
+    res, _ = heldout.evaluate(signal_in_ast04("t"), signal_in_ast04("v"), test, n_boot=10)
+    ids = {m: {r["benchmark_id"] for r in res[m]["rows"] if r["scores"]} for m in res}
+    assert ids["max"] == ids["logreg"] == ids["AST04"] and "xn" not in ids["max"]
+    assert res["max"]["unscored"] == 0 and res["logreg"]["unscored"] == 1

@@ -34,7 +34,7 @@ Requires Python 3.11+, [uv](https://docs.astral.sh/uv/) and a running [Ollama](h
 
 ```bash
 uv sync
-uv run pytest -q                                   # 70 tests, no Ollama needed
+uv run pytest -q                                   # 75 tests, no Ollama needed
 uv run python -m svb.run --n 200 --seed 0          # prints a run dir under runs/
 uv run python -m svb.score runs/<run_id>           # metrics, AUC and threshold-sweep tables
 uv run python -m svb.heldout --train runs/<train> --val runs/<val> --test runs/<test>   # held-out evaluation

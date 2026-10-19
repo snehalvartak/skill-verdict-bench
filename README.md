@@ -34,9 +34,10 @@ Requires Python 3.11+, [uv](https://docs.astral.sh/uv/) and a running [Ollama](h
 
 ```bash
 uv sync
-uv run pytest -q                                   # 71 tests, no Ollama needed
+uv run pytest -q                                   # 94 tests, no Ollama needed
 uv run python -m svb.run --n 200 --seed 0          # prints a run dir under runs/
 uv run python -m svb.score runs/<run_id>           # metrics, AUC and threshold-sweep tables
+uv run python -m svb.heldout --train runs/<train> --val runs/<val> --test runs/<test>   # held-out evaluation
 uv run python -m svb.run --n 200 --seed 0 --resume runs/<run_id>   # continue a killed run (refuses if sample, prompts or model changed)
 ```
 
@@ -83,6 +84,7 @@ svb/data.py        pinned dataset download and hash check, split filter, stratif
 svb/run.py         run methods over a sample, write predictions.jsonl + config.json
 svb/score.py       precision, recall, F1, AUC, threshold sweep, bootstrap CIs, per-check hit rates and AUC, recall by attack category
 svb/compare.py     cross-method comparison tables for a set of run dirs
+svb/heldout.py     threshold and check combination chosen on validation, reported on test with CIs
 svb/skillscreen.py SkillScreen's metric rules, CSV export, comparison with its released predictions, probe sample
 docs/              spec, plan, experiment logs
 ```

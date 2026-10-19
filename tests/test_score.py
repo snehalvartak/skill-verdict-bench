@@ -106,3 +106,18 @@ def test_report_includes_auc_and_sweep(tmp_path):
     out = report(tmp_path)
     assert "| ast10 | 1.00 |" in out and "| 0.5 | 1.00 / 1.00 / 1.00 |" in out and "| 0.05 | 0.50 / 1.00 / 0.67 |" in out
     assert "regex P / R / F1" not in out
+
+from svb.score import bootstrap_ci
+
+def test_bootstrap_ci_constant_stat_is_a_point():
+    rows = [S(1, a=0.9), S(0, a=0.1)] * 10
+    assert bootstrap_ci(rows, lambda rs: 0.3, n_boot=50) == (0.3, 0.3)
+
+def test_bootstrap_ci_perfect_auc_and_drops_none_resamples():
+    rows = [S(1, a=0.9), S(0, a=0.1)] * 3   # small: some resamples are single-class, auc -> None
+    lo, hi = bootstrap_ci(rows, auc, n_boot=200, seed=0)
+    assert lo == hi == 1.0
+
+def test_bootstrap_ci_is_seeded():
+    rows = [S(i % 2, a=(i * 7 % 10) / 10) for i in range(30)]
+    assert bootstrap_ci(rows, auc, n_boot=100, seed=3) == bootstrap_ci(rows, auc, n_boot=100, seed=3)

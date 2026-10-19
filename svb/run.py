@@ -21,6 +21,7 @@ def _read_done(pred):
     os.replace(tmp, pred)  # atomic: a kill mid-rewrite never loses the original
     return done
 
+MAX_FAILED_IN_A_ROW = 10  # ponytail: a dead model fails every call; a few flaky ones never reach 10 in a row
 DEFAULT_METHODS = ["ast10", "naive-llm", "regex"]  # controls (ast10-split, naive-x5) are opt-in via --methods
 
 def _check_resume(saved, cfg):
@@ -30,9 +31,11 @@ def _check_resume(saved, cfg):
     if bad:
         raise ValueError(f"resume config differs from the saved run in: {', '.join(bad)}")
 
-def run(n=200, split="random", part="test", seed=0, methods=None, out_root="runs", df=None, resume=None):
+def run(n=200, split="random", part="test", seed=0, methods=None, out_root="runs", df=None, resume=None, exclude=()):
     methods = methods or DEFAULT_METHODS
-    df = sample(load(split, part) if df is None else df, n, seed)
+    df = load(split, part) if df is None else df
+    skip = {i for d in exclude for i in json.loads((pathlib.Path(d) / "config.json").read_text())["sample_ids"]}
+    df = sample(df[~df.benchmark_id.isin(skip)], n, seed)
     cfg = {"model": "clef-flash", "model_digest": model_digest(), "prompt_hashes": prompt_hashes(),
            "threshold": THRESHOLD, "seed": seed, "split": split, "part": part, "n": n, "max_chars": MAX_CHARS,
            "methods": methods, "sample_ids": list(df.benchmark_id)}
@@ -45,15 +48,19 @@ def run(n=200, split="random", part="test", seed=0, methods=None, out_root="runs
         out.mkdir(parents=True)
         (out / "config.json").write_text(json.dumps(cfg, indent=2))
         done = set()
+    failed = 0
     with open(out / "predictions.jsonl", "a") as f:
         for _, r in df.iterrows():
             for m in methods:
                 if (r.benchmark_id, m) in done:
                     continue
                 v = METHODS[m](r.text)
+                failed = failed + 1 if v["scores"] and all(x is None for x in v["scores"].values()) else 0
                 f.write(json.dumps({"benchmark_id": r.benchmark_id, "label": int(r.label), "method": m,
                                     **v, "attack_categories": [str(c) for c in r.attack_categories]}) + "\n")
                 f.flush()
+                if failed >= MAX_FAILED_IN_A_ROW:
+                    raise RuntimeError(f"{failed} model calls failed in a row; fix the model, then --resume {out}")
     return out
 
 if __name__ == "__main__":
@@ -64,5 +71,6 @@ if __name__ == "__main__":
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--methods", nargs="*")
     p.add_argument("--resume", help="run dir to continue (same --n/--seed/--split)")
+    p.add_argument("--exclude", nargs="*", default=[], help="run dirs whose skills are left out of the sample")
     a = p.parse_args()
-    print(run(a.n, a.split, a.part, a.seed, a.methods, resume=a.resume))
+    print(run(a.n, a.split, a.part, a.seed, a.methods, resume=a.resume, exclude=a.exclude))

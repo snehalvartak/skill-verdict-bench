@@ -1,0 +1,35 @@
+[2026-10-19 10:43:06] start
+[2026-10-19 10:43:07] backend: OpenRouter cloudflare/clef-flash on provider cloudflare, served as cloudflare/clef-flash|Cloudflare|unpinned, state sent as a string
+[2026-10-19 10:43:07] note: OpenRouter returned no dated version for cloudflare/clef-flash; a silent model change would not be detected
+[2026-10-19 10:43:12] context check: source_disjoint: longest test skill sent as 44684 characters (cut at 60,000: False); model read 11169 input tokens m_structural_disjoint: longest test skill (60000 characters) was refused: OpenRouter HTTP 422: {"error":{"message":"HTTP 422: {\"errors\":[{\"message\":\"AiError: AiError: Request requires 31548 tokens; the maximum is 24576 (6aff1130-a84f-40a3-bef6-c8c825d0ad49)\",\"code\":3030}],\"success\":false,\"result\":{},\"messages\":[]}","code":422}} <- WARNING: long skills will be unscored 
+[2026-10-19 10:43:13] sd-train: running (spent so far $0)
+runs/exp005/sd-train
+[2026-10-19 10:47:08] sd-train: done (     900 predictions, spent so far $0.1525)
+[2026-10-19 10:47:08] sd-validation: running (spent so far $0.1525)
+runs/exp005/sd-validation
+[2026-10-19 10:52:48] sd-validation: done (    1200 predictions, spent so far $0.364)
+[2026-10-19 10:52:48] sd-test: running (spent so far $0.364)
+runs/exp005/sd-test
+[2026-10-19 11:10:42] sd-test: done (    4152 predictions, spent so far $1.0283)
+[2026-10-19 11:13:28] sd: analysis written
+[2026-10-19 11:13:28] msd-train: running (spent so far $1.0283)
+runs/exp005/msd-train
+[2026-10-19 11:17:29] msd-train: done (     900 predictions, spent so far $1.1985)
+[2026-10-19 11:17:29] msd-validation: running (spent so far $1.1985)
+runs/exp005/msd-validation
+[2026-10-19 11:22:47] msd-validation: done (    1200 predictions, spent so far $1.3922)
+[2026-10-19 11:22:47] msd-test: running (spent so far $1.3922)
+systemone call failed: SSLError: [SSL: SSLV3_ALERT_BAD_RECORD_MAC] ssl/tls alert bad record mac (_ssl.c:2710)
+systemone call failed: SSLError: [SSL: SSLV3_ALERT_BAD_RECORD_MAC] ssl/tls alert bad record mac (_ssl.c:2710)
+systemone call failed: RuntimeError: OpenRouter HTTP 422: {"error":{"message":"HTTP 422: {\"errors\":[{\"message\":\"AiError: AiError: Request requires 32016 tokens; the maximum is 24576 (1f06ae4d-997c-4722-9455-595166d0aca1)\",\"code\":3030}],\"success\":false,\"result\":{},\"messages\":[]}","code":422}}
+systemone call failed: RuntimeError: OpenRouter HTTP 422: {"error":{"message":"HTTP 422: {\"errors\":[{\"message\":\"AiError: AiError: Request requires 31555 tokens; the maximum is 24576 (72dd0c0e-8c54-4f53-aff6-66bc8178f4cb)\",\"code\":3030}],\"success\":false,\"result\":{},\"messages\":[]}","code":422}}
+systemone call failed: RuntimeError: OpenRouter HTTP 422: {"error":{"message":"HTTP 422: {\"errors\":[{\"message\":\"AiError: AiError: Request requires 31591 tokens; the maximum is 24576 (7efad979-fdb3-413d-b3ae-5ab51460e429)\",\"code\":3030}],\"success\":false,\"result\":{},\"messages\":[]}","code":422}}
+systemone call failed: RuntimeError: OpenRouter HTTP 422: {"error":{"message":"HTTP 422: {\"errors\":[{\"message\":\"AiError: AiError: Request requires 31601 tokens; the maximum is 24576 (0af6825e-d988-4bb2-ad74-9c6615cd0778)\",\"code\":3030}],\"success\":false,\"result\":{},\"messages\":[]}","code":422}}
+systemone call failed: RuntimeError: OpenRouter HTTP 422: {"error":{"message":"HTTP 422: {\"errors\":[{\"message\":\"AiError: AiError: Request requires 31589 tokens; the maximum is 24576 (b24404ec-34c2-4ec9-a862-9cd983b036a0)\",\"code\":3030}],\"success\":false,\"result\":{},\"messages\":[]}","code":422}}
+systemone call failed: RuntimeError: OpenRouter HTTP 422: {"error":{"message":"HTTP 422: {\"errors\":[{\"message\":\"AiError: AiError: Request requires 31586 tokens; the maximum is 24576 (6568b68d-8826-4dfd-966e-1beb360151c4)\",\"code\":3030}],\"success\":false,\"result\":{},\"messages\":[]}","code":422}}
+systemone call failed: RuntimeError: OpenRouter HTTP 422: {"error":{"message":"HTTP 422: {\"errors\":[{\"message\":\"AiError: AiError: Request requires 31585 tokens; the maximum is 24576 (c4eb39cd-72c6-4a98-bca4-c66ea2b536fd)\",\"code\":3030}],\"success\":false,\"result\":{},\"messages\":[]}","code":422}}
+systemone call failed: SSLError: [SSL: SSLV3_ALERT_BAD_RECORD_MAC] ssl/tls alert bad record mac (_ssl.c:2710)
+runs/exp005/msd-test
+[2026-10-19 11:47:36] msd-test: done (    5841 predictions, spent so far $2.367)
+[2026-10-19 11:51:28] msd: analysis written
+[2026-10-19 11:51:28] finished; read runs/exp005/summary.md

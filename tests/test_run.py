@@ -145,3 +145,49 @@ def test_resume_counts_legacy_method_names_as_done(tmp_path):
     pred = tmp_path / "predictions.jsonl"
     pred.write_text(json.dumps({"benchmark_id": "a", "method": "naive-llm", "flag": False}) + "\n")
     assert runmod._read_done(pred) == {("a", "generic-1q")}
+
+def _hosted_df(n):
+    return pd.DataFrame({"benchmark_id": [f"s{i}" for i in range(n)], "label": [i % 2 for i in range(n)],
+                         "source_id": ["s"] * n, "text": [f"skill {i}" for i in range(n)],
+                         "attack_categories": [[] for _ in range(n)]})
+
+def _fake_hosted(monkeypatch, cost=0.01):
+    from svb import systemone
+    monkeypatch.setenv("OPENROUTER_API_KEY", "k")
+    monkeypatch.setattr(runmod, "model_digest", lambda: "typesafe/jev-1.14-20261010|TypeSafe")
+    def post(body, attempts=5):
+        return {"model": "typesafe/jev-1.14-20261010", "provider": "TypeSafe",
+                "answers": {q: {"type": "noul", "noul": 0.6} for q in body["questions"]},
+                "usage": {"input_tokens": 100, "output_tokens": 0, "cost": cost}}
+    monkeypatch.setattr(systemone, "_post_openrouter", post)
+
+def test_hosted_run_records_backend_and_usage_with_workers(tmp_path, monkeypatch):
+    _fake_hosted(monkeypatch)
+    out = runmod.run(n=6, methods=["generic-1q", "ast10"], df=_hosted_df(6), out=str(tmp_path / "r"),
+                     backend="openrouter", model="typesafe/jev-1.14", workers=3)
+    rows = [json.loads(l) for l in (out / "predictions.jsonl").read_text().splitlines()]
+    cfg = json.loads((out / "config.json").read_text())
+    assert len(rows) == 12 and {(r["benchmark_id"], r["method"]) for r in rows} == {(f"s{i}", m) for i in range(6) for m in ("generic-1q", "ast10")}
+    assert cfg["backend"] == "openrouter" and cfg["model"] == "typesafe/jev-1.14" and cfg["model_digest"].startswith("typesafe/jev-1.14-")
+    ast = next(r for r in rows if r["method"] == "ast10")
+    assert ast["usage"]["calls"] == 1 and ast["usage"]["served"] == ["typesafe/jev-1.14-20261010|TypeSafe"]
+
+def test_max_cost_stops_and_resume_continues(tmp_path, monkeypatch):
+    import pytest
+    _fake_hosted(monkeypatch, cost=0.01)
+    kw = dict(n=5, methods=["generic-1q"], df=_hosted_df(5), backend="openrouter", model="typesafe/jev-1.14")
+    with pytest.raises(RuntimeError, match="reached --max-cost"):
+        runmod.run(out=str(tmp_path / "r"), max_cost=0.025, **kw)
+    pred = tmp_path / "r" / "predictions.jsonl"
+    assert len(pred.read_text().splitlines()) == 3
+    with pytest.raises(RuntimeError, match="reached --max-cost"):  # spend already logged counts toward the cap
+        runmod.run(resume=tmp_path / "r", max_cost=0.035, **kw)
+    runmod.run(resume=tmp_path / "r", max_cost=1.0, **kw)
+    assert len(pred.read_text().splitlines()) == 5
+
+def test_local_runs_keep_their_config_keys_and_rows(tmp_path, monkeypatch):
+    monkeypatch.setattr(runmod, "model_digest", lambda: "sha-test")
+    out = runmod.run(n=4, methods=["regex"], df=_df4(), out=str(tmp_path / "r"))
+    cfg = json.loads((out / "config.json").read_text())
+    assert not {"backend", "state_format"} & set(cfg) and cfg["model"] == "clef-flash"
+    assert all("usage" not in json.loads(l) for l in (out / "predictions.jsonl").read_text().splitlines())

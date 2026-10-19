@@ -52,6 +52,25 @@ Ties at a threshold are flagged.
 
 **Exploratory, before the main runs (004a).** A SkillHarm probe: 100 SkillHarm malicious skills (seed 0) and all 90 benign SkillFortifyBench skills, taken from the SD test set. Only AUROC and score distributions are read from it, and nothing is chosen from it. Because these skills are SD test skills, the probe looks at test data before the main run, and that is disclosed here.
 
+## Amendment 1 (2026-10-19, before any 004 run was scored)
+
+**What changed: the model.** The local run could not go ahead, so 004 uses the **hosted** `cloudflare/clef-flash` through OpenRouter (`POST /api/alpha/decisions`), not the local Ollama build with digest `0a2a05d6a581…`. Everything else above is unchanged:
+- samples and methods;
+- combiners and thresholds;
+- comparisons, handling and known weaknesses.
+
+**What the runner records.** It probes the hosted model before any run and writes `runs/exp004/backend.txt`, holding:
+- **the version OpenRouter serves** (the dated slug and provider, which also becomes every run's `model_digest`);
+- **how the skill text is sent** (a plain string, as in 001 to 003, or `{"skill_md": text}` if the string form is refused).
+
+Both are fixed for the whole experiment. If the served version changes between runs, the runner stops instead of mixing versions. If OpenRouter returns no dated version, the runner says so, and a silent change could not be detected.
+
+**Consequences, stated in advance:**
+- **Not a re-measurement of 001 to 003.** The hosted model may use different weights or precision from the local Q8 build, so 004 says nothing about the local model's numbers.
+- **The probe's frozen 003 weights** (`probe-logreg003`) were fitted on the local model's scores, so that row is indicative only.
+- **Context window.** The hosted context is reported as 24,576 tokens, against our cap of 60,000 characters (about 15,000 tokens). The runner records what the model reads for the longest test skill.
+- **Budget.** At about $0.038 per million input tokens, the planned runs should cost about $2 to $5. The runner logs the cost OpenRouter reports for every call, and stops at $5 per run step or $15 in total.
+
 ## Results
 
 To be filled from `runs/exp004/summary.md`. The pre-registered comparisons come first; exploratory results are labelled as such.

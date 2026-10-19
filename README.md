@@ -60,7 +60,7 @@ OPENROUTER_API_KEY=... uv run python -m svb.run --backend openrouter --model clo
   --methods ast10 generic-1q --workers 8 --max-cost 1 --n 200 --seed 0
 ```
 
-Experiment 004 runs unattended: `bash scripts/exp004_overnight.sh` (start it with `nohup`; see `docs/superpowers/plans/2026-10-19-overnight-brief.md`). It resumes where it stopped and writes `runs/exp004/summary.md`.
+Experiment 004 runs unattended on hosted `cloudflare/clef-flash` (pre-registration amendment 1): export `OPENROUTER_API_KEY`, then `bash scripts/exp004_overnight.sh` (start it with `nohup`; see `docs/superpowers/plans/2026-10-19-overnight-brief.md`). It resumes where it stopped and writes `runs/exp004/summary.md`.
 
 Runs created before `--part` existed (including experiment 001) have no `part` in their `config.json`, so `--resume` refuses them. They can still be scored; to continue one, start a fresh run.
 

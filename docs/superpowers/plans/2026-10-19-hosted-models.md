@@ -1,6 +1,6 @@
 # Hosted decision models through OpenRouter
 
-Date: 2026-10-19. Status: backend built (`svb.run --backend openrouter`); no hosted run made yet.
+Date: 2026-10-19. Status: backend built (`svb.run --backend openrouter`). Experiment 004 is the first hosted run, on `cloudflare/clef-flash` (`scripts/exp004_overnight.sh`).
 
 ## Why
 

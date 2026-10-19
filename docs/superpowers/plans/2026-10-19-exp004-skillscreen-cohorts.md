@@ -1,5 +1,7 @@
 # Experiment 004: SkillScreen's test sets, under source shift
 
+> **2026-10-19:** 004 now runs on hosted `cloudflare/clef-flash` through OpenRouter, not the local Ollama build. See pre-registration amendment 1 in `docs/experiments/004-skillscreen-cohorts.md`. With 8 workers it takes hours, not about 19, and costs about $2 to $5. The local-model commands below are kept for the record; `scripts/exp004_overnight.sh` runs the hosted version.
+
 Draft by the cloud session for the local session, which runs it. Committing it as `docs/experiments/004-*.md` is the pre-registration: do that before any test run is scored, then leave that section untouched.
 
 Spec: `docs/experiments/003-heldout-threshold.md` (limitations and exploratory notes), `docs/superpowers/plans/2026-10-18-work-split.md`.

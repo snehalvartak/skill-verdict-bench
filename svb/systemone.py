@@ -7,7 +7,7 @@ import json, os, sys, threading, time, urllib.error, urllib.request
 
 URL = "http://localhost:11434/v1/systemone"
 TAGS = "http://localhost:11434/api/tags"
-OPENROUTER_URL = "https://openrouter.ai/api/alpha/decisions"
+OPENROUTER_URL = os.environ.get("SVB_OPENROUTER_URL", "https://openrouter.ai/api/alpha/decisions")  # override only for tests
 RETRY_CODES = {408, 429, 500, 502, 503, 504}
 BACKEND = {"name": "ollama", "model": "clef-flash", "state_format": "string"}
 _tl = threading.local()  # per-thread usage, so concurrent workers each see only their own calls

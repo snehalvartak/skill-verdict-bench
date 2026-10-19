@@ -23,8 +23,8 @@ MODEL=${MODEL:-cloudflare/clef-flash}
 PROVIDER=${PROVIDER:-cloudflare}  # every call on this OpenRouter provider, no fallbacks (amendment 2)
 WORKERS=${WORKERS:-8}         # skills scored at once
 STEP_CAP=${STEP_CAP:-3}       # dollars per run step (expected about $1 each)
-TOTAL_CAP=${TOTAL_CAP:-10}    # dollars for the whole experiment (expected about $2.50)
-METHODS=(ast10 ast10-split generic-1q generic-5q regex)
+TOTAL_CAP=${TOTAL_CAP:-10}    # dollars for the whole experiment (expected about $2.40)
+METHODS=(ast10 ast10-split generic-1q)
 PREREG=docs/experiments/005-full-method-set.md
 mkdir -p "$OUT"
 
@@ -108,7 +108,6 @@ analyse() {  # analyse PROTOCOL ; held-out tables, then SkillScreen comparisons 
   local t=$OUT/$p-test
   py -m svb.skillscreen export "$t" --method generic-1q --out "$OUT/$p-generic.csv"
   py -m svb.skillscreen export "$t" --method ast10 --combine max --out "$OUT/$p-ast10.csv"
-  py -m svb.skillscreen export "$t" --method generic-5q --combine max --out "$OUT/$p-generic5q.csv"
   local w; w=$(field "$j" "','.join(str(x) for x in d['weights'])")
   local theirs=(typesafe judge-gpt-5.5 "$gate")
   for c in logreg AST04 max; do   # ast10-split, as in 004, plus P3 (against batched ast10) on max
@@ -120,11 +119,7 @@ analyse() {  # analyse PROTOCOL ; held-out tables, then SkillScreen comparisons 
   done
   local ta; ta=$(field "$OUT/$p-heldout-ast10.json" "d['results']['max']['rules']['fpr05']['threshold']" 2> /dev/null || echo 0.5)
   py -m svb.skillscreen compare "$t" --method ast10 --combine max --skillscreen "$SS" --protocol "$p" --threshold "$ta" \
-    --paired "$OUT/$p-generic5q.csv" "$OUT/$p-generic.csv" "${theirs[@]}" > "$OUT/$p-compare-ast10.txt" 2>&1 || log "$p: compare ast10 failed"
-  py -m svb.skillscreen compare "$t" --method generic-5q --combine max --skillscreen "$SS" --protocol "$p" --threshold 0.5 \
-    --paired "$OUT/$p-generic.csv" "${theirs[@]}" > "$OUT/$p-compare-generic5q.txt" 2>&1 || log "$p: compare generic-5q failed"
-  py -m svb.skillscreen compare "$t" --method regex --skillscreen "$SS" --protocol "$p" --threshold 0.5 \
-    > "$OUT/$p-compare-regex.txt" 2>&1 || log "$p: compare regex failed"
+    --paired "$OUT/$p-generic.csv" "${theirs[@]}" > "$OUT/$p-compare-ast10.txt" 2>&1 || log "$p: compare ast10 failed"
   # R1: does 004 reproduce? Same skills, same methods, 004 against this run (skipped when 004's runs are absent)
   if [ -d "results/exp004/$p-test" ]; then
     py scripts/exp005_reproduce.py "results/exp004/$p-test" "$t" > "$OUT/$p-reproduce.txt" 2>&1 || log "$p: reproducibility check failed"

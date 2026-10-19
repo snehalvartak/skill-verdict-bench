@@ -1,4 +1,6 @@
 import argparse, json, os, pathlib, time
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from svb import systemone
 from svb.checks import MAX_CHARS, THRESHOLD, prompt_hashes
 from svb.data import load, sample
 from svb.methods import METHODS
@@ -38,10 +40,23 @@ def _read_ids(path):
         raise ValueError(f"{path} lists no skill ids")
     return ids
 
+def _spent(pred):
+    """Hosted cost already logged in a run's predictions, so a --max-cost cap holds across resumes."""
+    if not pred.exists():
+        return 0.0
+    return sum((json.loads(l).get("usage") or {}).get("cost", 0.0) for l in pred.read_text().splitlines() if l.strip())
+
+def _score(m, text):
+    v = METHODS[m](text)
+    return v, systemone.take_usage()
+
 def run(n=200, split="random", part="test", seed=0, methods=None, out_root="runs", df=None, resume=None, exclude=(),
-        ids=None, out=None):
-    """`ids`: file of benchmark ids to restrict the part to (every id must be in it). `out`: run dir to create."""
+        ids=None, out=None, backend="ollama", model=None, state_format="string", workers=1, max_cost=None):
+    """`ids`: file of benchmark ids to restrict the part to (every id must be in it). `out`: run dir to create.
+    `backend`/`model`: ollama (local clef-flash) or openrouter with a hosted decision model id.
+    `workers`: concurrent skills (useful for hosted models). `max_cost`: stop once logged hosted spend reaches it."""
     methods = methods or DEFAULT_METHODS
+    systemone.configure(backend, model, state_format)
     df = load(split, part) if df is None else df
     if ids:
         want = _read_ids(ids)
@@ -56,6 +71,8 @@ def run(n=200, split="random", part="test", seed=0, methods=None, out_root="runs
            "methods": methods, "sample_ids": list(df.benchmark_id)}
     if ids:
         cfg["ids_file"] = pathlib.Path(ids).name  # only when used, so older configs still pass the resume check
+    if backend != "ollama":  # local runs keep their old config keys, so they still resume
+        cfg.update(model=model, backend=backend, state_format=state_format)
     if resume:
         out = pathlib.Path(resume)
         _check_resume(json.loads((out / "config.json").read_text()), cfg)
@@ -65,19 +82,40 @@ def run(n=200, split="random", part="test", seed=0, methods=None, out_root="runs
         out.mkdir(parents=True)  # an existing dir is refused: resume it instead
         (out / "config.json").write_text(json.dumps(cfg, indent=2))
         done = set()
-    failed = 0
-    with open(out / "predictions.jsonl", "a") as f:
-        for _, r in df.iterrows():
-            for m in methods:
-                if (r.benchmark_id, m) in done:
-                    continue
-                v = METHODS[m](r.text)
+    todo = [(r, m) for _, r in df.iterrows() for m in methods if (r.benchmark_id, m) not in done]
+    failed, spent = 0, _spent(out / "predictions.jsonl")
+    with open(out / "predictions.jsonl", "a") as f, ThreadPoolExecutor(max(1, workers)) as pool:
+        # ponytail: at most `workers` jobs in flight; rows are written as they finish, and resume keys on (id, method)
+        jobs, live = iter(todo), {}
+        def refill():
+            while len(live) < max(1, workers):
+                r, m = next(jobs, (None, None))
+                if r is None:
+                    return
+                live[pool.submit(_score, m, r.text)] = (r, m)
+        refill()
+        while live:
+            finished, _ = wait(live, return_when=FIRST_COMPLETED)
+            for fut in finished:
+                r, m = live.pop(fut)
+                v, usage = fut.result()
                 failed = failed + 1 if v["scores"] and all(x is None for x in v["scores"].values()) else 0
-                f.write(json.dumps({"benchmark_id": r.benchmark_id, "label": int(r.label), "method": m,
-                                    **v, "attack_categories": [str(c) for c in r.attack_categories]}) + "\n")
+                row = {"benchmark_id": r.benchmark_id, "label": int(r.label), "method": m,
+                       **v, "attack_categories": [str(c) for c in r.attack_categories]}
+                if usage is not None:
+                    row["usage"] = usage
+                    spent += usage["cost"]
+                f.write(json.dumps(row) + "\n")
                 f.flush()
                 if failed >= MAX_FAILED_IN_A_ROW:
+                    for x in live:
+                        x.cancel()
                     raise RuntimeError(f"{failed} model calls failed in a row; fix the model, then --resume {out}")
+                if max_cost is not None and spent >= max_cost:
+                    for x in live:
+                        x.cancel()
+                    raise RuntimeError(f"hosted spend ${spent:.4f} reached --max-cost ${max_cost}; raise it and --resume {out}")
+            refill()
     return out
 
 if __name__ == "__main__":
@@ -91,5 +129,12 @@ if __name__ == "__main__":
     p.add_argument("--exclude", nargs="*", default=[], help="run dirs whose skills are left out of the sample")
     p.add_argument("--ids", help="file of benchmark ids, one per line; the part is restricted to them")
     p.add_argument("--out", help="run dir to create (default runs/<timestamp>); continue it later with --resume")
+    p.add_argument("--backend", default="ollama", choices=["ollama", "openrouter"])
+    p.add_argument("--model", help="hosted decision model id for --backend openrouter, e.g. cloudflare/clef-flash")
+    p.add_argument("--state-format", default="string", choices=["string", "object"],
+                   help="send the skill as the state string, or as {\"skill_md\": ...} if the backend needs an object")
+    p.add_argument("--workers", type=int, default=1, help="skills scored at once (keep 1 for local Ollama)")
+    p.add_argument("--max-cost", type=float, help="stop when logged hosted spend in this run reaches this many dollars")
     a = p.parse_args()
-    print(run(a.n, a.split, a.part, a.seed, a.methods, resume=a.resume, exclude=a.exclude, ids=a.ids, out=a.out))
+    print(run(a.n, a.split, a.part, a.seed, a.methods, resume=a.resume, exclude=a.exclude, ids=a.ids, out=a.out,
+              backend=a.backend, model=a.model, state_format=a.state_format, workers=a.workers, max_cost=a.max_cost))

@@ -34,7 +34,7 @@ Requires Python 3.11+, [uv](https://docs.astral.sh/uv/) and a running [Ollama](h
 
 ```bash
 uv sync
-uv run pytest -q                                   # 109 tests, no Ollama needed
+uv run pytest -q                                   # 119 tests, no Ollama needed
 uv run python -m svb.run --n 200 --seed 0          # prints a run dir under runs/
 uv run python -m svb.score runs/<run_id>           # metrics, AUC and threshold-sweep tables
 uv run python -m svb.heldout --train runs/<train> --val runs/<val> --test runs/<test>   # held-out evaluation
@@ -51,6 +51,13 @@ uv run python -m svb.skillscreen compare runs/<run_id> --method ast10 --skillscr
 uv run python -m svb.skillscreen export runs/<run_id> --method ast10 --out ast10.csv   # SkillScreen's CSV format
 # score by AST04 alone or a fitted logistic regression instead of the max, and test AUROC against another method:
 uv run python -m svb.skillscreen compare runs/<run_id> --method ast10-split --combine logreg --weights=<from svb.heldout> --skillscreen ../SkillScreen --protocol sd --threshold <t> --paired typesafe
+```
+
+Hosted decision models run through OpenRouter with the same methods. The key is read from `OPENROUTER_API_KEY`; the served model version and per-call cost are recorded in each run. Hosted runs are separate from local ones and are never pooled with them. Models, estimated costs and the order of work are in `docs/superpowers/plans/2026-10-19-hosted-models.md`.
+
+```bash
+OPENROUTER_API_KEY=... uv run python -m svb.run --backend openrouter --model cloudflare/clef-flash \
+  --methods ast10 generic-1q --workers 8 --max-cost 1 --n 200 --seed 0
 ```
 
 Experiment 004 runs unattended: `bash scripts/exp004_overnight.sh` (start it with `nohup`; see `docs/superpowers/plans/2026-10-19-overnight-brief.md`). It resumes where it stopped and writes `runs/exp004/summary.md`.
@@ -81,7 +88,7 @@ The dataset contains real malicious skill text. Treat it as data to read, never 
 ## Layout
 
 ```
-svb/systemone.py   Ollama client for /v1/systemone
+svb/systemone.py   decision-model client: local Ollama /v1/systemone or hosted OpenRouter /api/alpha/decisions
 svb/checks.py      AST01 to AST05 questions, threshold, truncation limit
 svb/methods.py     ast10, generic-1q, regex, and the controls generic-5q and ast10-split
 svb/data.py        pinned dataset download and hash check, split filter, stratified sampling

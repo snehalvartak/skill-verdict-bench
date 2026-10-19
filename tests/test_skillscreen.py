@@ -60,7 +60,7 @@ def test_compare_rows_sources_and_cascade(root):
     ours = {"h1": (1, 0.3), "h2": (1, 0.05), "f1": (0, 0.02), "f2": (0, 0.4)}
     res = ss.compare(ours, root, "sd", t=0.1)
     assert res["n"] == 4 and res["cohort"] == 5
-    assert [r["method"] for r in res["rows"]] == ["ours", "direct-s42", "typesafe"]
+    assert [(r["method"], r["n"]) for r in res["rows"]] == [("ours", 4), ("direct-s42", 4), ("typesafe", 4)]
     assert res["rows"][0]["recall"] == 0.5 and res["rows"][0]["fpr"] == 0.5
     assert res["by_source"]["SkillFortifyBench"][0] == [2, 1, 2]
     assert res["by_source"]["SkillHarm"][1] == [2, 1, 2]
@@ -68,12 +68,62 @@ def test_compare_rows_sources_and_cascade(root):
 
 def test_compare_refuses_label_mismatch_and_no_overlap(root):
     with pytest.raises(ValueError, match="labels differ"):
-        ss.compare({"h1": (0, 0.3)}, root, "sd")
+        ss.compare({"h1": (0, 0.3)}, root, "sd", t=0.1)
     with pytest.raises(ValueError, match="shares no skills"):
-        ss.compare({"zz": (1, 0.3)}, root, "sd")
+        ss.compare({"zz": (1, 0.3)}, root, "sd", t=0.1)
 
 def test_probe_ids_takes_skillharm_malicious_and_fortify_benign(root):
     ids = ss.probe_ids(root, n_harm=2, seed=0)
     assert len(ids) == 4 and {"f1", "f2"} <= set(ids)
     assert all(i.startswith(("h", "f")) for i in ids)
     assert ss.probe_ids(root, n_harm=2, seed=0) == ids
+
+def test_compare_reports_partial_prediction_file_instead_of_crashing(root):
+    p = root / "data/predictions/sd/test/typesafe.csv"
+    p.write_text("\n".join(p.read_text().splitlines()[:-2]) + "\n")  # drop f1, f2
+    res = ss.compare({"h1": (1, 0.3), "f1": (0, 0.02)}, root, "sd", t=0.1)
+    ts = next(r for r in res["rows"] if r["method"] == "typesafe")
+    assert ts["n"] == 1 and ts["auroc"] is None and ts["fpr"] is None
+
+def test_compare_refuses_gate_missing_a_skill(root):
+    p = root / "data/predictions/sd/test/direct-s42.csv"
+    p.write_text("\n".join(p.read_text().splitlines()[:-1]) + "\n")  # drop f2
+    with pytest.raises(ValueError, match="gate direct-s42 has no prediction for 1"):
+        ss.compare({"h1": (1, 0.3), "f2": (0, 0.4)}, root, "sd", t=0.1)
+
+def _cfg(d, **kw):
+    d.mkdir(exist_ok=True); (d / "config.json").write_text(json.dumps(kw)); return d
+
+def test_check_run_refuses_wrong_split_or_part(tmp_path):
+    ss.check_run(_cfg(tmp_path / "a", split="source_disjoint", part="test"), "sd")
+    ss.check_run(_cfg(tmp_path / "b", split="m_structural_disjoint"), "msd")  # pre --part runs are test
+    with pytest.raises(ValueError, match="split=random part=test; --protocol sd needs split=source_disjoint"):
+        ss.check_run(_cfg(tmp_path / "c", split="random", part="test"), "sd")
+    with pytest.raises(ValueError, match="part=validation"):
+        ss.check_run(_cfg(tmp_path / "d", split="source_disjoint", part="validation"), "sd")
+
+def test_report_lists_rows_sources_and_cascade(root):
+    res = ss.compare({"h1": (1, 0.3), "h2": (1, 0.05), "f1": (0, 0.02), "f2": (0, 0.4)}, root, "sd", t=0.1)
+    out = ss.report(res, 0.1, "direct-s42")
+    assert out.startswith("Skills compared: 4 of SkillScreen's 5. Ours cut at 0.1, theirs at 0.5.")
+    assert "| ours | 4 | 0.500 | 0.500 | 0.500 | 0.500 |" in out
+    assert "| SkillFortifyBench | benign | 2 | 1 | 2 |" in out
+    assert out.endswith("recall 0.500, FPR 0.500")
+
+def test_cli_compare_checks_split_and_requires_threshold(tmp_path, root, capsys):
+    d = _run(tmp_path, [R("h1", 1, {"AST01": 0.3}), R("f1", 0, {"AST01": 0.02})])
+    _cfg(d, split="source_disjoint", part="test")
+    ss.main(["compare", str(d), "--method", "ast10", "--skillscreen", str(root), "--protocol", "sd", "--threshold", "0.1"])
+    assert "| ours | 2 |" in capsys.readouterr().out
+    with pytest.raises(SystemExit, match="--protocol msd needs split=m_structural_disjoint"):
+        ss.main(["compare", str(d), "--method", "ast10", "--skillscreen", str(root), "--protocol", "msd", "--threshold", "0.1"])
+    with pytest.raises(SystemExit):
+        ss.main(["compare", str(d), "--method", "ast10", "--skillscreen", str(root), "--protocol", "sd"])
+    assert "--threshold" in capsys.readouterr().err
+
+def test_cli_export_and_probe_write_files(tmp_path, root, capsys):
+    d = _run(tmp_path, [R("h1", 1, {"AST01": 0.3})])
+    ss.main(["export", str(d), "--method", "ast10", "--out", str(tmp_path / "x.csv")])
+    assert (tmp_path / "x.csv").read_text() == "benchmark_id,label,score\nh1,1,0.3\n"
+    ss.main(["probe", "--skillscreen", str(root), "--out", str(tmp_path / "ids.txt"), "--n-harm", "1"])
+    assert len((tmp_path / "ids.txt").read_text().split()) == 3 and "3 ids" in capsys.readouterr().out

@@ -15,11 +15,11 @@ def test_ast10_all_none_is_unparseable(monkeypatch):
 
 def test_threshold_boundary_counts_as_flag(monkeypatch):
     monkeypatch.setattr(methods, "ask", lambda s, q: {"malicious": checks.THRESHOLD})
-    assert methods.naive_llm("skill")["flag"] is True
+    assert methods.generic_1q("skill")["flag"] is True
 
-def test_naive_maps_single_question(monkeypatch):
+def test_generic_1q_maps_single_question(monkeypatch):
     monkeypatch.setattr(methods, "ask", lambda s, q: {"malicious": 0.8})
-    v = methods.naive_llm("skill")
+    v = methods.generic_1q("skill")
     assert v["flag"] is True and v["scores"] == {"malicious": 0.8}
 
 def test_truncate_records_truncation():
@@ -35,7 +35,7 @@ def test_empty_text_does_not_call_model(monkeypatch):
     def boom(*a, **k): raise AssertionError("called")
     monkeypatch.setattr(methods, "ask", boom)
     assert methods.ast10("  ")["flag"] is None
-    assert methods.naive_llm("")["flag"] is None
+    assert methods.generic_1q("")["flag"] is None
 
 def test_all_five_checks_defined():
     assert list(checks.CHECKS) == ["AST01", "AST02", "AST03", "AST04", "AST05"]
@@ -53,16 +53,20 @@ def test_ast10_split_empty_text_no_calls(monkeypatch):
     monkeypatch.setattr(methods, "ask", lambda *a: (_ for _ in ()).throw(AssertionError("called")))
     assert methods.ast10_split(" ")["flag"] is None
 
-def test_naive_x5_batches_five_paraphrases_in_one_call(monkeypatch):
+def test_generic_5q_batches_five_paraphrases_in_one_call(monkeypatch):
     seen = []
     monkeypatch.setattr(methods, "ask", lambda s, q: seen.append(list(q)) or {k: 0.6 if k == "n3" else 0.1 for k in q})
-    v = methods.naive_x5("skill")
+    v = methods.generic_5q("skill")
     assert seen == [["n1", "n2", "n3", "n4", "n5"]] and v["flag"] is True
 
 def test_paraphrases_are_distinct_and_hashed():
-    qs = [v[0] for v in checks.NAIVE5.values()]
+    qs = [v[0] for v in checks.GENERIC5.values()]
     assert len(set(qs)) == 5
     assert "n1" in checks.prompt_hashes()
 
 def test_new_methods_registered():
-    assert {"ast10-split", "naive-x5"} <= set(methods.METHODS)
+    assert {"ast10-split", "generic-5q"} <= set(methods.METHODS)
+
+def test_generic_question_methods_are_named_by_what_they_ask():
+    assert {"generic-1q", "generic-5q"} <= set(methods.METHODS)
+    assert not {"naive-llm", "naive-x5"} & set(methods.METHODS)

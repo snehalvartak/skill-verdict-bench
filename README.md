@@ -7,10 +7,10 @@ This repo is an evaluation harness. It sends each skill's `SKILL.md` text to a l
 | Method | What it does |
 |---|---|
 | `ast10` | One question per checkable [OWASP Agentic Skills Top 10](https://owasp.github.io/www-project-agentic-skills-top-10/) risk (AST01 to AST05). Flags a skill if any score reaches the threshold. |
-| `naive-llm` | A single "is this skill malicious?" question to the same model. |
+| `generic-1q` | A single "is this skill malicious?" question to the same model. |
 | `regex` | A keyword scanner (pipe-to-shell, secret paths, webhooks, concealment phrases). |
 
-Two opt-in controls, `naive-x5` (five generic paraphrases) and `ast10-split` (one call per check), isolate what drives `ast10`'s result: `--methods naive-x5 ast10-split`. Compare runs with `python -m svb.compare <run dirs>`.
+Two opt-in controls, `generic-5q` (five generic paraphrases) and `ast10-split` (one call per check), isolate what drives `ast10`'s result: `--methods generic-5q ast10-split`. Runs made before 2026-10-19 call these `naive-llm` and `naive-x5`; the scorers read them under the new names. Compare runs with `python -m svb.compare <run dirs>`.
 
 AST06 to AST10 (isolation, update drift, scanning, governance, cross-platform reuse) describe ecosystems, not a single skill's text, so they are left out on purpose.
 
@@ -21,10 +21,10 @@ Experiment 001, 200 skills (154 malicious, 46 benign), threshold 0.5:
 | method | precision | recall | F1 |
 |---|---|---|---|
 | ast10 | 1.00 | 0.25 | 0.40 |
-| naive-llm | 1.00 | 0.14 | 0.24 |
+| generic-1q | 1.00 | 0.14 | 0.24 |
 | regex | 0.91 | 0.14 | 0.24 |
 
-The model's scores are low, so 0.5 is too strict. Ranked by score without a threshold, `ast10` reaches AUC 0.80 against 0.63 for `naive-llm`. That gap is confounded (`ast10` takes the maximum of five scores), and the controls are listed in the write-up. Details, caveats and an incident report are in [`docs/experiments/001-baseline-200.md`](docs/experiments/001-baseline-200.md).
+The model's scores are low, so 0.5 is too strict. Ranked by score without a threshold, `ast10` reaches AUC 0.80 against 0.63 for `generic-1q`. That gap is confounded (`ast10` takes the maximum of five scores), and the controls are listed in the write-up. Details, caveats and an incident report are in [`docs/experiments/001-baseline-200.md`](docs/experiments/001-baseline-200.md).
 
 Experiment 002 ran the controls: with the max-of-five and batching held fixed, the AST10 questions still beat generic paraphrases by +0.12 AUC (95% CI +0.05 to +0.20). Batching does not change the aggregate ranking. See [`docs/experiments/002-controls.md`](docs/experiments/002-controls.md). The experiment logs in `docs/experiments/` are written to double as blog material.
 
@@ -34,7 +34,7 @@ Requires Python 3.11+, [uv](https://docs.astral.sh/uv/) and a running [Ollama](h
 
 ```bash
 uv sync
-uv run pytest -q                                   # 98 tests, no Ollama needed
+uv run pytest -q                                   # 101 tests, no Ollama needed
 uv run python -m svb.run --n 200 --seed 0          # prints a run dir under runs/
 uv run python -m svb.score runs/<run_id>           # metrics, AUC and threshold-sweep tables
 uv run python -m svb.heldout --train runs/<train> --val runs/<val> --test runs/<test>   # held-out evaluation
@@ -57,7 +57,7 @@ Runs created before `--part` existed (including experiment 001) have no `part` i
 
 ## Related work
 
-[SkillScreen](https://arxiv.org/abs/2610.17727) (Huang et al., 2026) evaluates detectors on the same benchmark, on its structurally disjoint and source-disjoint splits: a fine-tuned 2B decision model (AUROC 0.992 and 0.916), ModernBERT, a word SVM, LLM judges and static scanners. Its TypeSafe Jev 1.13 baseline asks one fixed question through the same `/v1/systemone` interface, so it is the published counterpart of `naive-llm` here.
+[SkillScreen](https://arxiv.org/abs/2610.17727) (Huang et al., 2026) evaluates detectors on the same benchmark, on its structurally disjoint and source-disjoint splits: a fine-tuned 2B decision model (AUROC 0.992 and 0.916), ModernBERT, a word SVM, LLM judges and static scanners. Its TypeSafe Jev 1.13 baseline asks one fixed question through the same `/v1/systemone` interface, so it is the published counterpart of `generic-1q` here.
 
 The numbers in experiments 001 and 002 come from 200 skills of the `random` split and are not comparable with SkillScreen's. What this repo adds is the per-risk decomposition: one question per OWASP AST risk, scored and compared separately. `svb.skillscreen` scores runs with SkillScreen's rules (tie-averaged AUROC, FPR at 99% recall, missing scores flagged) and compares them skill by skill with its released predictions, which are CC BY 4.0 © SkillScreen contributors and are read from a local clone, not copied here. If you use that comparison, cite SkillScreen too:
 
@@ -81,7 +81,7 @@ The dataset contains real malicious skill text. Treat it as data to read, never 
 ```
 svb/systemone.py   Ollama client for /v1/systemone
 svb/checks.py      AST01 to AST05 questions, threshold, truncation limit
-svb/methods.py     ast10, naive-llm, regex, and the controls naive-x5 and ast10-split
+svb/methods.py     ast10, generic-1q, regex, and the controls generic-5q and ast10-split
 svb/data.py        pinned dataset download and hash check, split filter, stratified sampling
 svb/run.py         run methods over a sample, write predictions.jsonl + config.json
 svb/score.py       precision, recall, F1, AUC, threshold sweep, bootstrap CIs, per-check hit rates and AUC, recall by attack category

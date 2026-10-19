@@ -1,6 +1,6 @@
 """Held-out evaluation: python -m svb.heldout --train runs/A --val runs/B --test runs/C"""
 import argparse, json, pathlib
-from svb.score import auc, auc_diff_ci, bootstrap_ci, fit_logreg, metrics_at, predict_logreg, youden_threshold
+from svb.score import read_predictions, auc, auc_diff_ci, bootstrap_ci, fit_logreg, metrics_at, predict_logreg, youden_threshold
 
 CHECK_IDS = ["AST01", "AST02", "AST03", "AST04", "AST05"]
 
@@ -10,7 +10,7 @@ def load_run(d, part, method="ast10-split"):
     got = cfg.get("part", "test")  # ponytail: runs from before --part existed were all test
     if got != part:
         raise ValueError(f"{d} is a {got} run, expected {part}")
-    rows = [r for r in map(json.loads, (d / "predictions.jsonl").read_text().splitlines()) if r["method"] == method]
+    rows = [r for r in read_predictions(d) if r["method"] == method]
     if not rows:
         raise ValueError(f"{d} has no {method} predictions")
     ids = [r["benchmark_id"] for r in rows]

@@ -26,7 +26,7 @@ If a change needs a file the other side owns, say so in the PR description and k
    - Run:
      ```bash
      uv run python -m svb.skillscreen probe --skillscreen ../SkillScreen --out probe-ids.txt   # 100 SkillHarm + 90 SkillFortifyBench benign
-     uv run python -m svb.run --split source_disjoint --part test --ids probe-ids.txt --methods ast10 naive-llm
+     uv run python -m svb.run --split source_disjoint --part test --ids probe-ids.txt --methods ast10 generic-1q
      uv run python -m svb.skillscreen compare runs/<id> --method ast10 --skillscreen ../SkillScreen --protocol sd --threshold 0.1
      ```
    - Report AUROC on the probe set and the score distributions only. `--threshold` is required, but its recall and FPR columns mean nothing here; choose no threshold from the probe. Say in the write-up that this looked at test data.

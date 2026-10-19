@@ -47,8 +47,8 @@ def test_run_scores_max_for_llm_and_flag_for_regex(tmp_path):
                         R("b", 0, {"AST01": None}, flag=None)])
     assert ss.run_scores(d, "ast10") == {"a": (1, 0.4), "b": (0, None)}
     assert ss.run_scores(d, "regex") == {"a": (1, 0.0)}
-    with pytest.raises(ValueError, match="no naive-llm rows"):
-        ss.run_scores(d, "naive-llm")
+    with pytest.raises(ValueError, match="no generic-1q rows"):
+        ss.run_scores(d, "generic-1q")
 
 def test_export_round_trips(tmp_path):
     out = tmp_path / "x.csv"
@@ -159,12 +159,12 @@ def test_cli_compare_with_combiner_and_paired_test(tmp_path, root, capsys):
 
 def test_cli_export_with_combiner_feeds_paired_test(tmp_path, root, capsys):
     d = _run(tmp_path, [R("h1", 1, {"AST01": 0.0, "AST04": 0.3}), R("f1", 0, {"AST01": 0.9, "AST04": 0.02}),
-                        R("h1", 1, {"malicious": 0.1}, "naive-llm"), R("f1", 0, {"malicious": 0.2}, "naive-llm")])
+                        R("h1", 1, {"malicious": 0.1}, "generic-1q"), R("f1", 0, {"malicious": 0.2}, "generic-1q")])
     _cfg(d, split="source_disjoint", part="test")
-    naive = tmp_path / "naive.csv"
-    ss.main(["export", str(d), "--method", "naive-llm", "--out", str(naive)])
+    generic = tmp_path / "generic.csv"
+    ss.main(["export", str(d), "--method", "generic-1q", "--out", str(generic)])
     ss.main(["export", str(d), "--method", "ast10", "--combine", "AST04", "--out", str(tmp_path / "a4.csv")])
     assert (tmp_path / "a4.csv").read_text() == "benchmark_id,label,score\nf1,0,0.02\nh1,1,0.3\n"
     ss.main(["compare", str(d), "--method", "ast10", "--combine", "AST04", "--skillscreen", str(root),
-             "--protocol", "sd", "--threshold", "0.1", "--paired", str(naive), "--n-boot", "50"])
-    assert f"Paired AUROC, ours - {naive}: 1.000 [1.000, 1.000] on 2 skills" in capsys.readouterr().out
+             "--protocol", "sd", "--threshold", "0.1", "--paired", str(generic), "--n-boot", "50"])
+    assert f"Paired AUROC, ours - {generic}: 1.000 [1.000, 1.000] on 2 skills" in capsys.readouterr().out

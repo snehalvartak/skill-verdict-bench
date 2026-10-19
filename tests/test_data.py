@@ -44,3 +44,29 @@ def test_load_filters_split_and_drops_missing_text(tmp_path, monkeypatch):
     df = data.load()
     assert list(df.benchmark_id) == ["a", "b"]
     assert list(df.columns) == ["benchmark_id", "label", "source_id", "text", "attack_categories"]
+
+def test_download_with_wrong_hash_is_refused(tmp_path, monkeypatch):
+    from svb import data
+    import pytest
+    monkeypatch.setattr(data, "DATA", tmp_path)
+    monkeypatch.setattr(data.urllib.request, "urlretrieve", lambda url, dest: open(dest, "wb").write(b"tampered"))
+    with pytest.raises(ValueError, match="sha256 differs"):
+        data._fetch("primary.parquet")
+    assert not list(tmp_path.iterdir())
+
+def test_download_url_is_pinned(tmp_path, monkeypatch):
+    from svb import data
+    seen = []
+    monkeypatch.setattr(data, "DATA", tmp_path)
+    monkeypatch.setattr(data.urllib.request, "urlretrieve", lambda url, dest: (seen.append(url), open(dest, "wb").write(b"x")))
+    data._fetch("splits/random.parquet")
+    assert seen == [data.BASE + "splits/random.parquet"] and data.REVISION in seen[0]
+
+def test_verify_reports_each_cached_file(tmp_path, monkeypatch):
+    from svb import data
+    monkeypatch.setattr(data, "DATA", tmp_path)
+    (tmp_path / "primary.parquet").write_bytes(b"old")
+    (tmp_path / "splits_random.parquet").write_bytes(b"x")
+    v = data.verify()
+    assert v["primary.parquet"] == "differs" and v["splits/random.parquet"] == "not pinned"
+    assert v["splits/source_disjoint.parquet"] == "not cached"

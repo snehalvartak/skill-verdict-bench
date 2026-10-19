@@ -8,6 +8,7 @@ and three SkillScreen methods for comparison. Thresholds and intervals come from
 import argparse, json, math, pathlib, sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+from svb.checks import CHECKS as CHECKS_Q, GENERIC, GENERIC5
 from svb.skillscreen import GATE, read_scores, sources
 
 CHECKS = ["AST01", "AST02", "AST03", "AST04", "AST05"]
@@ -45,6 +46,25 @@ def protocol(res, ss, p, src):
     vs = {k: res_[v]["vs_baseline"] for k, v in ours.items() if "vs_baseline" in res_[v]}
     return {"split": SPLIT[p], "weights": w, "thresholds": thresholds, "auc": auc, "vs_generic": vs, "skills": skills}
 
+def _qs(d):
+    return [{"id": k, "text": v[0], "yes": v[1]["true"], "no": v[1]["false"]} for k, v in d.items()]
+
+def questions():
+    """Question text comes from svb.checks, so the dashboard shows exactly what the model was asked."""
+    sets = {"ast10": _qs(CHECKS_Q), "generic-1q": _qs(GENERIC), "generic-5q": _qs(GENERIC5)}
+    sets["ast10-split"] = sets["ast10"]  # same five questions, one call each
+    exps = [
+        {"id": "001", "title": "Baseline on 200 skills", "asks": "Does splitting detection into one question per AST10 risk find more malicious skills than one generic question?",
+         "methods": ["ast10", "generic-1q", "regex"], "data": "random/test, 200 skills (154 malicious, 46 benign)", "model": "clef-flash, local (digest 2aa4d39fd93b)"},
+        {"id": "002", "title": "Controls", "asks": "Is the gap from the AST10 content, the max of five scores, or batching the questions into one call?",
+         "methods": ["generic-5q", "ast10-split"], "data": "same 200 skills as 001", "model": "clef-flash, local (digest 2aa4d39fd93b)"},
+        {"id": "003", "title": "Held-out threshold", "asks": "Do 001 and 002 hold when the threshold and the combination are chosen on separate data?",
+         "methods": ["ast10-split"], "data": "random: 200 train, 200 validation, 200 test", "model": "clef-flash, local (digest 0a2a05d6a581)"},
+        {"id": "004", "title": "SkillScreen cohorts", "asks": "Do 003's findings hold on SkillScreen's test sets when the skills come from unseen sources, and where does clef-flash sit next to published methods?",
+         "methods": ["ast10-split", "generic-1q"], "data": "source-disjoint (1,384 test) and structurally disjoint (1,947 test)", "model": "clef-flash, hosted via OpenRouter"},
+    ]
+    return {"sets": sets, "experiments": exps}
+
 def main():
     a = argparse.ArgumentParser()
     a.add_argument("--results", default="results/exp004")
@@ -58,6 +78,7 @@ def main():
     out = pathlib.Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(data, separators=(",", ":")))
+    out.with_name("questions.json").write_text(json.dumps(questions(), indent=1))
     print(out, f"{out.stat().st_size / 1024:.0f} KB", {p: len(v["skills"]) for p, v in data["protocols"].items()})
 
 if __name__ == "__main__":

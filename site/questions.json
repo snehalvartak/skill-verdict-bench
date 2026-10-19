@@ -149,6 +149,18 @@
    ],
    "data": "source-disjoint (1,384 test) and structurally disjoint (1,947 test)",
    "model": "clef-flash, hosted via OpenRouter"
+  },
+  {
+   "id": "005",
+   "title": "Same skills, every method, reproduced",
+   "asks": "Does 004 reproduce on the same hosted model, and is the five-call split better than the same five questions in one call?",
+   "methods": [
+    "ast10-split",
+    "ast10",
+    "generic-1q"
+   ],
+   "data": "same test skills as 004",
+   "model": "clef-flash, hosted via OpenRouter (cloudflare, unpinned)"
   }
  ]
 }

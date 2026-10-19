@@ -1,0 +1,2 @@
+ast10-split: 1384 skills in common; Spearman 1.0000; largest score difference 0.0000; AUROC 0.6719 vs 0.6719
+generic-1q: 1384 skills in common; Spearman 1.0000; largest score difference 0.0000; AUROC 0.5182 vs 0.5182

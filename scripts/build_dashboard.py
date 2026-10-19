@@ -1,6 +1,6 @@
-"""Build site/data.json for the experiment 004 dashboard.
+"""Build site/data.json for the experiment 005 dashboard.
 
-python scripts/build_dashboard.py [--results results/exp004] [--skillscreen ../SkillScreen] [--out site/data.json]
+python scripts/build_dashboard.py [--results results/exp005] [--skillscreen ../SkillScreen] [--out site/data.json]
 
 Per test skill: label, source, our scores (generic-1q, the five checks, and the max, AST04 and logreg combiners)
 and three SkillScreen methods for comparison. Thresholds and intervals come from the held-out JSON. No skill text.
@@ -19,7 +19,7 @@ THEIRS = {"skillscreen": None, "gpt55": "judge-gpt-5.5", "typesafe": "typesafe"}
 def _r(x):  # 6 significant digits: rounding near-1.0 probabilities to fixed decimals would create ties and move AUROC
     return None if x is None else float(f"{x:.6g}")
 
-def protocol(res, ss, p, src):
+def protocol(res, ss, p, src, old):
     held = json.loads((res / f"{p}-heldout.json").read_text())
     w = held["weights"]
     rows = {}
@@ -29,22 +29,32 @@ def protocol(res, ss, p, src):
     pred = ss / "data/predictions" / p / "test"
     theirs = {k: read_scores(pred / f"{v or GATE[p]}.csv") for k, v in THEIRS.items()}
     skills = []
+    prev = {}  # experiment 004's scores for the same skills, so one skill can be read across both runs
+    for line in (old / f"{p}-test" / "predictions.jsonl").read_text().splitlines():
+        r = json.loads(line)
+        prev.setdefault(r["benchmark_id"], {})[r["method"]] = r["scores"]
     for i, r in sorted(rows.items()):
         g = (r.get("generic-1q") or {}).get("malicious")
         c = [(r.get("ast10-split") or {}).get(k) for k in CHECKS]
         full = None not in c
+        b = [(r.get("ast10") or {}).get(k) for k in CHECKS]
         logreg = 1 / (1 + math.exp(-(w[0] + sum(a * b for a, b in zip(w[1:], c))))) if full else None
         skills.append({"id": i, "y": r["label"], "src": src.get(i, "unknown"), "cat": r["cats"][0] if r["cats"] else "",
-                       "s": {"generic": _r(g), "max": _r(max(c)) if full else None, "AST04": _r(c[3]),
+                       "s004": {**{k: _r((prev.get(i, {}).get("ast10-split") or {}).get(k)) for k in CHECKS},
+                                "generic": _r((prev.get(i, {}).get("generic-1q") or {}).get("malicious"))},
+                       "s": {"generic": _r(g), "max": _r(max(c)) if full else None, "AST04": _r(c[3]), "ast10": _r(max(b)) if None not in b else None,
                              "logreg": _r(logreg), **{k: _r(v) for k, v in zip(CHECKS, c)},
                              **{k: _r(t.get(i, (None, None))[1]) for k, t in theirs.items()}}})
     res_ = held["results"]
-    ours = {"max": "max", "AST04": "AST04", "logreg": "logreg", "generic": "baseline"}
+    ab = json.loads((res / f"{p}-heldout-ast10.json").read_text())["results"]["max"]
+    res_["ast10"] = ab
+    ours = {"ast10": "ast10", "max": "max", "AST04": "AST04", "logreg": "logreg", "generic": "baseline"}
     thresholds = {k: {"youden": res_[v]["threshold"], **{rule: res_[v]["rules"][rule]["threshold"] for rule in ("tpr95", "fpr05")}}
                   for k, v in ours.items()}
     auc = {k: {"auc": res_[v]["auc"], "ci": res_[v]["auc_ci"]} for k, v in ours.items()}
     vs = {k: res_[v]["vs_baseline"] for k, v in ours.items() if "vs_baseline" in res_[v]}
-    return {"split": SPLIT[p], "weights": w, "thresholds": thresholds, "auc": auc, "vs_generic": vs, "skills": skills}
+    held_ = {k: res_[v]["rules"]["fpr05"] for k, v in ours.items()}
+    return {"split": SPLIT[p], "held": held_, "weights": w, "thresholds": thresholds, "auc": auc, "vs_generic": vs, "skills": skills}
 
 def _qs(d):
     return [{"id": k, "text": v[0], "yes": v[1]["true"], "no": v[1]["false"]} for k, v in d.items()]
@@ -62,19 +72,22 @@ def questions():
          "methods": ["ast10-split"], "data": "random: 200 train, 200 validation, 200 test", "model": "clef-flash, local (digest 0a2a05d6a581)"},
         {"id": "004", "title": "SkillScreen cohorts", "asks": "Do 003's findings hold on SkillScreen's test sets when the skills come from unseen sources, and where does clef-flash sit next to published methods?",
          "methods": ["ast10-split", "generic-1q"], "data": "source-disjoint (1,384 test) and structurally disjoint (1,947 test)", "model": "clef-flash, hosted via OpenRouter"},
+        {"id": "005", "title": "Same skills, every method, reproduced", "asks": "Does 004 reproduce on the same hosted model, and is the five-call split better than the same five questions in one call?",
+         "methods": ["ast10-split", "ast10", "generic-1q"], "data": "same test skills as 004", "model": "clef-flash, hosted via OpenRouter (cloudflare, unpinned)"},
     ]
     return {"sets": sets, "experiments": exps}
 
 def main():
     a = argparse.ArgumentParser()
-    a.add_argument("--results", default="results/exp004")
+    a.add_argument("--results", default="results/exp005")
     a.add_argument("--skillscreen", default="../SkillScreen")
     a.add_argument("--out", default="site/data.json")
     a = a.parse_args()
     res, ss = pathlib.Path(a.results), pathlib.Path(a.skillscreen)
+    old = res.with_name("exp004")
     src = sources(ss)
     served = (res / "backend.txt").read_text().split()
-    data = {"model": "cloudflare/clef-flash", "served": served[1] if len(served) > 1 else "", "protocols": {p: protocol(res, ss, p, src) for p in SPLIT}}
+    data = {"model": "cloudflare/clef-flash", "served": served[1] if len(served) > 1 else "", "protocols": {p: protocol(res, ss, p, src, old) for p in SPLIT}}
     out = pathlib.Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(data, separators=(",", ":")))

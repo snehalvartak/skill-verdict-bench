@@ -1,0 +1,4 @@
+     match  primary.parquet
+     match  splits/m_structural_disjoint.parquet
+not pinned  splits/random.parquet
+     match  splits/source_disjoint.parquet

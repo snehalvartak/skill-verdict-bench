@@ -1,0 +1,32 @@
+Skills compared: 190 of SkillScreen's 1384. Ours cut at 0.1, theirs at 0.5.
+
+| method | skills | AUROC | FPR@99 | recall | FPR |
+|---|---|---|---|---|---|
+| ours | 190 | 0.698 | 0.933 | 0.790 | 0.533 |
+| direct-s1 | 190 | 0.653 | 1.000 | 0.950 | 1.000 |
+| direct-s2 | 190 | 0.590 | 1.000 | 0.950 | 1.000 |
+| direct-s3 | 190 | 0.468 | 1.000 | 0.940 | 1.000 |
+| direct-s4 | 190 | 0.660 | 1.000 | 0.970 | 1.000 |
+| direct-s42 | 190 | 0.570 | 1.000 | 0.940 | 1.000 |
+| encoder-modernbert-large-s1 | 190 | 0.100 | 1.000 | 0.920 | 1.000 |
+| encoder-modernbert-large-s3 | 190 | 0.493 | 1.000 | 0.970 | 1.000 |
+| encoder-modernbert-large-s4 | 190 | 0.000 | 1.000 | 0.980 | 1.000 |
+| encoder-modernbert-large-s42 | 190 | 0.006 | 1.000 | 0.920 | 1.000 |
+| encoder-modernbert-large-s5 | 190 | 0.040 | 1.000 | 0.860 | 1.000 |
+| judge-claude-haiku-4-5 | 190 | 0.358 | 1.000 | 0.200 | 0.000 |
+| judge-gpt-5.4-mini | 190 | 0.848 | 1.000 | 0.100 | 0.000 |
+| judge-gpt-5.5-fewshot-sd | 190 | 0.972 | 0.800 | 0.590 | 0.000 |
+| judge-gpt-5.5-reasoning | 190 | 0.957 | 0.722 | 0.350 | 0.000 |
+| judge-gpt-5.5 | 190 | 0.927 | 0.867 | 0.460 | 0.000 |
+| judge-grok-4.3-sd | 190 | 0.405 | 1.000 | 0.230 | 0.322 |
+| static | 190 | 0.599 | 1.000 | 0.300 | 0.122 |
+| typesafe | 190 | 0.107 | 1.000 | 0.000 | 0.000 |
+| untuned-r002 | 190 | 0.059 | 1.000 | 0.000 | 0.000 |
+| word-svm-r002 | 190 | 0.907 | 0.978 | 0.630 | 0.000 |
+
+| source | label | skills | ours flagged | direct-s42 flagged |
+|---|---|---|---|---|
+| SkillFortifyBench | benign | 90 | 48 | 90 |
+| SkillHarm | malicious | 100 | 79 | 94 |
+
+Cascade (direct-s42 flags, then ours must also flag): recall 0.750, FPR 0.533

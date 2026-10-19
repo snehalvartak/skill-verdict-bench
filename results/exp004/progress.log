@@ -1,0 +1,35 @@
+[2026-10-19 11:45:42] start
+[2026-10-19 11:45:45] backend: OpenRouter cloudflare/clef-flash on provider cloudflare, served as cloudflare/clef-flash|Cloudflare|unpinned, state sent as a string
+[2026-10-19 11:45:45] note: OpenRouter returned no dated version for cloudflare/clef-flash; a silent model change would not be detected
+[2026-10-19 11:46:06] context check: source_disjoint: longest test skill sent as 44684 characters (cut at 60,000: False); model read 11169 input tokens m_structural_disjoint: longest test skill (60000 characters) was refused: OpenRouter HTTP 422: {"error":{"message":"HTTP 422: {\"errors\":[{\"message\":\"AiError: AiError: Request requires 31548 tokens; the maximum is 24576 (bb6fe0f4-17c2-4c30-82e6-6ded8bc9f7d7)\",\"code\":3030}],\"success\":false,\"result\":{},\"messages\":[]}","code":422}} <- WARNING: long skills will be unscored 
+190 ids -> runs/exp004/probe-ids.txt
+[2026-10-19 11:46:06] probe: running (spent so far $0)
+runs/exp004/probe
+[2026-10-19 11:49:50] probe: done (380 predictions, spent so far $0.0506)
+[2026-10-19 11:49:51] sd-train: running (spent so far $0.0506)
+runs/exp004/sd-train
+[2026-10-19 11:53:26] sd-train: done (600 predictions, spent so far $0.1771)
+[2026-10-19 11:53:26] sd-validation: running (spent so far $0.1771)
+runs/exp004/sd-validation
+[2026-10-19 11:58:08] sd-validation: done (800 predictions, spent so far $0.3528)
+[2026-10-19 11:58:09] sd-test: running (spent so far $0.3528)
+runs/exp004/sd-test
+[2026-10-19 12:14:17] sd-test: done (2768 predictions, spent so far $0.9027)
+[2026-10-19 12:20:14] sd: analysis written
+[2026-10-19 12:20:14] msd-train: running (spent so far $0.9027)
+runs/exp004/msd-train
+[2026-10-19 12:24:04] msd-train: done (600 predictions, spent so far $1.0444)
+[2026-10-19 12:24:05] msd-validation: running (spent so far $1.0444)
+runs/exp004/msd-validation
+[2026-10-19 12:28:25] msd-validation: done (800 predictions, spent so far $1.2048)
+[2026-10-19 12:28:25] msd-test: running (spent so far $1.2048)
+systemone call failed: RuntimeError: OpenRouter HTTP 422: {"error":{"message":"HTTP 422: {\"errors\":[{\"message\":\"AiError: AiError: Request requires 31555 tokens; the maximum is 24576 (9f4499ad-f6f3-4420-a6a5-d00f27a96aff)\",\"code\":3030}],\"success\":false,\"result\":{},\"messages\":[]}","code":422}}
+systemone call failed: RuntimeError: OpenRouter HTTP 422: {"error":{"message":"HTTP 422: {\"errors\":[{\"message\":\"AiError: AiError: Request requires 31591 tokens; the maximum is 24576 (d2e4a052-ecc5-4310-9026-8b45cc9e199e)\",\"code\":3030}],\"success\":false,\"result\":{},\"messages\":[]}","code":422}}
+systemone call failed: RuntimeError: OpenRouter HTTP 422: {"error":{"message":"HTTP 422: {\"errors\":[{\"message\":\"AiError: AiError: Request requires 31601 tokens; the maximum is 24576 (dc799845-f7b1-4c85-b909-b4eda7ffc83a)\",\"code\":3030}],\"success\":false,\"result\":{},\"messages\":[]}","code":422}}
+systemone call failed: RuntimeError: OpenRouter HTTP 422: {"error":{"message":"HTTP 422: {\"errors\":[{\"message\":\"AiError: AiError: Request requires 31589 tokens; the maximum is 24576 (5021b7c7-7c6d-4445-92f1-17d98304a743)\",\"code\":3030}],\"success\":false,\"result\":{},\"messages\":[]}","code":422}}
+systemone call failed: RuntimeError: OpenRouter HTTP 422: {"error":{"message":"HTTP 422: {\"errors\":[{\"message\":\"AiError: AiError: Request requires 31586 tokens; the maximum is 24576 (3d23ef23-ccc7-47b4-a7d5-6f490f042838)\",\"code\":3030}],\"success\":false,\"result\":{},\"messages\":[]}","code":422}}
+systemone call failed: RuntimeError: OpenRouter HTTP 422: {"error":{"message":"HTTP 422: {\"errors\":[{\"message\":\"AiError: AiError: Request requires 31585 tokens; the maximum is 24576 (aeaf0633-572b-4302-8a75-00509e80ac39)\",\"code\":3030}],\"success\":false,\"result\":{},\"messages\":[]}","code":422}}
+runs/exp004/msd-test
+[2026-10-19 12:49:06] msd-test: done (3894 predictions, spent so far $2.0143)
+[2026-10-19 12:57:54] msd: analysis written
+[2026-10-19 12:57:55] finished; read runs/exp004/summary.md

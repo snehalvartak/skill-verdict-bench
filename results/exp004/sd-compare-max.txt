@@ -1,0 +1,39 @@
+Skills compared: 1384 of SkillScreen's 1384. Ours cut at 0.2637, theirs at 0.5.
+
+| method | skills | AUROC | FPR@99 | recall | FPR |
+|---|---|---|---|---|---|
+| ours | 1384 | 0.672 | 0.952 | 0.238 | 0.086 |
+| direct-s1 | 1384 | 0.931 | 0.510 | 0.980 | 0.393 |
+| direct-s2 | 1384 | 0.919 | 0.475 | 0.977 | 0.328 |
+| direct-s3 | 1384 | 0.893 | 0.521 | 0.963 | 0.310 |
+| direct-s4 | 1384 | 0.935 | 0.459 | 0.985 | 0.413 |
+| direct-s42 | 1384 | 0.903 | 0.561 | 0.961 | 0.354 |
+| encoder-modernbert-large-s1 | 1384 | 0.738 | 0.903 | 0.946 | 0.598 |
+| encoder-modernbert-large-s3 | 1384 | 0.854 | 0.607 | 0.975 | 0.530 |
+| encoder-modernbert-large-s4 | 1384 | 0.815 | 0.541 | 0.990 | 0.563 |
+| encoder-modernbert-large-s42 | 1384 | 0.760 | 0.789 | 0.928 | 0.495 |
+| encoder-modernbert-large-s5 | 1384 | 0.680 | 0.894 | 0.867 | 0.550 |
+| judge-claude-haiku-4-5 | 1384 | 0.732 | 0.998 | 0.288 | 0.006 |
+| judge-gpt-5.4-mini | 1384 | 0.768 | 1.000 | 0.230 | 0.009 |
+| judge-gpt-5.5-fewshot-sd | 1384 | 0.941 | 0.798 | 0.604 | 0.022 |
+| judge-gpt-5.5-reasoning | 1384 | 0.932 | 1.000 | 0.337 | 0.011 |
+| judge-gpt-5.5 | 1384 | 0.914 | 1.000 | 0.428 | 0.009 |
+| judge-grok-4.3-sd | 1384 | 0.614 | 0.976 | 0.364 | 0.213 |
+| static | 1384 | 0.433 | 1.000 | 0.315 | 0.429 |
+| typesafe | 1384 | 0.652 | 1.000 | 0.113 | 0.000 |
+| untuned-r002 | 1384 | 0.568 | 0.998 | 0.006 | 0.000 |
+| word-svm-r002 | 1384 | 0.809 | 0.822 | 0.620 | 0.183 |
+
+| source | label | skills | ours flagged | direct-s42 flagged |
+|---|---|---|---|---|
+| ATR Skill Security Benchmark | malicious | 21 | 18 | 21 |
+| ATR Skill Security Benchmark | benign | 455 | 45 | 103 |
+| SkillFortifyBench | malicious | 90 | 85 | 90 |
+| SkillFortifyBench | benign | 90 | 2 | 90 |
+| SkillHarm | malicious | 728 | 97 | 695 |
+
+Cascade (direct-s42 flags, then ours must also flag): recall 0.234, FPR 0.020
+Paired AUROC, ours - runs/exp004/sd-generic.csv: 0.154 [0.117, 0.189] on 1384 skills
+Paired AUROC, ours - typesafe: 0.020 [-0.016, 0.054] on 1384 skills
+Paired AUROC, ours - judge-gpt-5.5: -0.243 [-0.271, -0.215] on 1384 skills
+Paired AUROC, ours - direct-s42: -0.232 [-0.266, -0.197] on 1384 skills

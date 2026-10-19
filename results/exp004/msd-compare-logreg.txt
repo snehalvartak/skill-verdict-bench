@@ -1,0 +1,49 @@
+Skills compared: 1947 of SkillScreen's 1947. Ours cut at 0.7753830101820911, theirs at 0.5.
+
+| method | skills | AUROC | FPR@99 | recall | FPR |
+|---|---|---|---|---|---|
+| ours | 1947 | 0.831 | 0.944 | 0.600 | 0.067 |
+| direct-s1 | 1947 | 0.991 | 0.242 | 0.965 | 0.051 |
+| direct-s2 | 1947 | 0.993 | 0.199 | 0.954 | 0.038 |
+| direct-s3 | 1947 | 0.992 | 0.221 | 0.951 | 0.031 |
+| direct-s4 | 1947 | 0.992 | 0.221 | 0.961 | 0.027 |
+| direct | 1947 | 0.992 | 0.246 | 0.952 | 0.018 |
+| encoder-modernbert-large-gpu-s1 | 1947 | 0.990 | 0.289 | 0.959 | 0.038 |
+| encoder-modernbert-large-gpu-s2 | 1947 | 0.990 | 0.304 | 0.959 | 0.038 |
+| encoder-modernbert-large-gpu-s3 | 1947 | 0.989 | 0.313 | 0.960 | 0.036 |
+| encoder-modernbert-large-gpu-s4 | 1947 | 0.990 | 0.251 | 0.967 | 0.072 |
+| encoder-modernbert-large-gpu-s42 | 1947 | 0.989 | 0.362 | 0.955 | 0.022 |
+| judge-claude-haiku-4-5 | 1947 | 0.862 | 0.926 | 0.659 | 0.029 |
+| judge-gpt-5.4-mini | 1947 | 0.862 | 1.000 | 0.563 | 0.025 |
+| judge-gpt-5.5-fewshot | 1947 | 0.958 | 0.957 | 0.879 | 0.025 |
+| judge-gpt-5.5-reasoning | 1947 | 0.953 | 0.868 | 0.711 | 0.013 |
+| judge-gpt-5.5 | 1947 | 0.950 | 0.911 | 0.721 | 0.007 |
+| judge-grok-4.3 | 1947 | 0.707 | 0.966 | 0.681 | 0.280 |
+| static | 1947 | 0.618 | 1.000 | 0.494 | 0.322 |
+| typesafe | 1947 | 0.841 | 1.000 | 0.338 | 0.002 |
+| untuned | 1947 | 0.678 | 0.955 | 0.042 | 0.000 |
+| word-svm | 1947 | 0.977 | 0.456 | 0.782 | 0.011 |
+
+| source | label | skills | ours flagged | direct flagged |
+|---|---|---|---|---|
+| ATR Skill Security Benchmark | malicious | 5 | 5 | 4 |
+| ATR Skill Security Benchmark | benign | 83 | 3 | 4 |
+| Agent Skill Malware | malicious | 7 | 1 | 6 |
+| AgentTrap | malicious | 22 | 2 | 11 |
+| AgentTrap | benign | 11 | 0 | 1 |
+| MalSkillBench | malicious | 967 | 789 | 938 |
+| MaliciousAgentSkillsBench | malicious | 61 | 32 | 42 |
+| SkillFortifyBench | malicious | 2 | 2 | 2 |
+| SkillFortifyBench | benign | 13 | 0 | 0 |
+| SkillHarm | malicious | 92 | 6 | 92 |
+| SkillLeakBench | malicious | 9 | 3 | 1 |
+| SkillSafetyBench | malicious | 11 | 1 | 10 |
+| SkillTrojan | benign | 2 | 0 | 0 |
+| SkillTrustBench | malicious | 324 | 59 | 322 |
+| SkillTrustBench | benign | 338 | 27 | 3 |
+
+Cascade (direct flags, then ours must also flag): recall 0.587, FPR 0.000
+Paired AUROC, ours - runs/exp004/msd-generic.csv: 0.129 [0.105, 0.152] on 1946 skills
+Paired AUROC, ours - typesafe: -0.010 [-0.028, 0.009] on 1946 skills
+Paired AUROC, ours - judge-gpt-5.5: -0.119 [-0.137, -0.103] on 1946 skills
+Paired AUROC, ours - direct: -0.161 [-0.179, -0.144] on 1946 skills

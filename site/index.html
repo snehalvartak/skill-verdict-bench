@@ -103,6 +103,8 @@ table.data th { text-align: left; font-weight: 500; color: var(--text-secondary)
 table.data td { border-bottom: 1px solid var(--grid); padding: 6px 8px; }
 table.data td.n, table.data th.n { text-align: right; }
 .scroll { overflow-x: auto; }
+.summary ol { margin: 4px 0 8px; padding-left: 20px; }
+.summary li { margin-bottom: 8px; }
 .notes { font-size: 13px; color: var(--text-secondary); }
 .notes li { margin-bottom: 6px; }
 footer { font-size: 12px; color: var(--text-muted); margin-top: 24px; }
@@ -127,6 +129,17 @@ footer { font-size: 12px; color: var(--text-muted); margin-top: 24px; }
 </div>
 
 <section class="tiles" id="tiles" aria-label="Headline numbers"></section>
+
+<section class="card summary" aria-labelledby="sum-h">
+  <h2 id="sum-h">What we found</h2>
+  <ol>
+    <li><strong>Targeted checks beat one generic question on both held-out test sets</strong> (pre-registered P1 and P2): AUROC +0.139 [+0.105, +0.172] on source-disjoint skills and +0.129 [+0.105, +0.152] on structurally disjoint ones. On sources never seen before, the generic question is at chance (0.518).</li>
+    <li><strong>Learned weights don't transfer to new sources.</strong> Taking the max of the five checks is as good as the fitted logistic regression on structurally disjoint skills and slightly better on source-disjoint ones (−0.014 [−0.027, −0.002]), unlike experiment 003.</li>
+    <li><strong>SkillHarm is the blind spot.</strong> At the 5% false-positive threshold the checks catch 85 of 90 SkillFortifyBench and 18 of 21 ATR malicious skills, but 39 of 728 SkillHarm ones. Even at SkillScreen's own false-positive rate they catch about half of SkillHarm, against SkillScreen's 95%.</li>
+    <li><strong>Where it stands:</strong> level with TypeSafe Jev 1.13, well behind SkillScreen's fine-tuned model (0.903 and 0.992 AUROC) and GPT-5.5 as a judge (0.914 and 0.950), but with far fewer false positives at a strict threshold.</li>
+  </ol>
+  <p class="sub">Full write-up, with every pre-registered comparison and the limitations: <a href="https://github.com/snehalvartak/skill-verdict-bench/blob/main/docs/experiments/004-skillscreen-cohorts.md">docs/experiments/004-skillscreen-cohorts.md</a>. Run: 9,842 predictions, $2.01, about 72 minutes.</p>
+</section>
 
 <div class="grid2">
   <section class="card" aria-labelledby="roc-h">

@@ -18,6 +18,7 @@ from svb.score import _max, predict_logreg
 CHECK_IDS = ["AST01", "AST02", "AST03", "AST04", "AST05"]
 
 PROTOCOL_SPLIT = {"msd": "m_structural_disjoint", "sd": "source_disjoint"}
+GATE = {"msd": "direct", "sd": "direct-s42"}  # SkillScreen seed 42; its file is named differently per protocol
 
 def auroc(labels, values):
     """SkillScreen's rule: ties get their mean rank, missing scores are dropped."""
@@ -112,13 +113,13 @@ def _row(name, ids, scores, t):
     return {"method": name, "n": len(have), "auroc": auroc(labels, values), "fpr99": f99 and f99["fpr"],
             "recall": at["recall"], "fpr": at["fpr"]}
 
-def compare(scores, root, protocol, t, gate="direct-s42"):
+def compare(scores, root, protocol, t, gate=None):
     """Our method next to every SkillScreen test method on the skills both scored.
 
     `t` applies to our scores (choose it on validation); SkillScreen's methods keep their native 0.5.
     `gate` is the SkillScreen file used as the first stage of the cascade; it must cover every compared skill.
     """
-    root = pathlib.Path(root)
+    root, gate = pathlib.Path(root), gate or GATE[protocol]
     cohort = read_scores(root / "data/cohorts" / f"{protocol}-test.csv")
     pred = root / "data/predictions" / protocol / "test"
     theirs = {p.stem: read_scores(p) for p in sorted(pred.glob("*.csv"))}
@@ -145,7 +146,7 @@ def compare(scores, root, protocol, t, gate="direct-s42"):
     both = [(g[i][1] is None or g[i][1] >= 0.5) and (scores[i][1] is None or scores[i][1] >= t) for i in ids]
     pos = [f for f, y in zip(both, labels) if y == 1]; neg = [f for f, y in zip(both, labels) if y == 0]
     cascade = {"recall": sum(pos) / len(pos) if pos else None, "fpr": sum(neg) / len(neg) if neg else None}
-    return {"n": len(ids), "cohort": len(cohort), "rows": rows, "by_source": by_src, "cascade": cascade}
+    return {"n": len(ids), "cohort": len(cohort), "rows": rows, "by_source": by_src, "cascade": cascade, "gate": gate}
 
 def paired_auroc_diff(scores, theirs, ids, n_boot=2000, seed=0):
     """Our AUROC minus theirs on the same skills, with a 95% paired-bootstrap interval (resampled by skill).
@@ -202,7 +203,7 @@ def main(argv=None):
     c = sub.add_parser("compare"); c.add_argument("run"); c.add_argument("--method", required=True)
     c.add_argument("--skillscreen", required=True); c.add_argument("--protocol", choices=sorted(PROTOCOL_SPLIT), required=True)
     c.add_argument("--threshold", type=float, required=True, help="cut for our scores, chosen on validation")
-    c.add_argument("--gate", default="direct-s42")
+    c.add_argument("--gate", help="SkillScreen file for the cascade's first stage (default: seed 42 for the protocol)")
     c.add_argument("--combine", default="max", help="max, logreg, or one check id such as AST04")
     c.add_argument("--weights", type=weights, help="logreg weights: intercept,AST01,...,AST05 (from svb.heldout)")
     c.add_argument("--paired", nargs="*", default=[],
@@ -225,7 +226,7 @@ def main(argv=None):
                 if not path.exists():
                     raise ValueError(f"no file {path}" if name.endswith(".csv") else f"no SkillScreen file {name}.csv in {pred}")
                 res.setdefault("paired", {})[name] = paired_auroc_diff(scores, read_scores(path), ids, a.n_boot)
-            print(report(res, a.threshold, a.gate))
+            print(report(res, a.threshold, res["gate"]))
         else:
             ids = probe_ids(a.skillscreen, a.n_harm, a.seed)
             pathlib.Path(a.out).write_text("".join(i + "\n" for i in ids))

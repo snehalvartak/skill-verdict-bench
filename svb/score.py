@@ -39,9 +39,17 @@ def _max(r):
     return max(v) if v else None
 
 def _auc(pos, neg):
+    """P(malicious score > benign score), ties counting half; mean ranks make it O(n log n), not O(pos x neg)."""
     if not pos or not neg:
         return None
-    return sum((p > n) + 0.5 * (p == n) for p in pos for n in neg) / (len(pos) * len(neg))
+    vals = sorted([(v, 1) for v in pos] + [(v, 0) for v in neg])
+    rank_sum, i = 0.0, 0
+    while i < len(vals):
+        j = i
+        while j < len(vals) and vals[j][0] == vals[i][0]:
+            j += 1
+        rank_sum += (i + 1 + j) / 2 * sum(y for _, y in vals[i:j]); i = j
+    return (rank_sum - len(pos) * (len(pos) + 1) / 2) / (len(pos) * len(neg))
 
 def auc(rows):
     """AUC of the max score; rows without scores are skipped."""

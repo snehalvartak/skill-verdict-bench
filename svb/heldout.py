@@ -52,7 +52,38 @@ def rates(rows, t):
     fpr = m["fp"] / (m["fp"] + m["tn"]) if m["fp"] + m["tn"] else None
     return tpr, fpr
 
-def evaluate(train, val, test, n_boot=2000, seed=0):
+def _scored(rows):
+    from svb.score import _max
+    return [(r["label"], _max(r)) for r in rows if _max(r) is not None]
+
+def threshold_at_tpr(rows, target=0.95):
+    """Highest threshold whose TPR on these rows is at least `target`."""
+    sc = _scored(rows); pos = [s for l, s in sc if l == 1]
+    for t in sorted({s for _, s in sc}, reverse=True):
+        if sum(s >= t for s in pos) / len(pos) >= target:
+            return t
+    return min(s for _, s in sc)
+
+def threshold_at_fpr(rows, target=0.05):
+    """Lowest threshold whose FPR on these rows is at most `target`; above every score if none is."""
+    sc = _scored(rows); neg = [s for l, s in sc if l == 0]
+    for t in sorted({s for _, s in sc}):
+        if sum(s >= t for s in neg) / len(neg) <= target:
+            return t
+    return max(s for _, s in sc) + 1e-9
+
+RULES = {"tpr95": lambda rows: threshold_at_tpr(rows, 0.95), "fpr05": lambda rows: threshold_at_fpr(rows, 0.05)}
+
+def _at(rs, t, n_boot, seed):
+    tpr, fpr = rates(rs, t)
+    return {"threshold": t, "tpr": tpr, "tpr_ci": bootstrap_ci(rs, lambda x: rates(x, t)[0], n_boot, seed),
+            "fpr": fpr, "fpr_ci": bootstrap_ci(rs, lambda x: rates(x, t)[1], n_boot, seed)}
+
+def evaluate(train, val, test, n_boot=2000, seed=0, base_val=None, base_test=None):
+    """Combiners fitted on train, thresholds from val, scored once on test.
+
+    With `base_val`/`base_test` (rows of a baseline method such as naive-llm, scored on the same validation and
+    test skills), the baseline gets the same thresholds and each combiner a paired AUC difference against it."""
     fit = [r for r in train if _full(r)]
     if not fit:
         raise ValueError("no fully scored train rows to fit the logistic regression on")
@@ -74,7 +105,19 @@ def evaluate(train, val, test, n_boot=2000, seed=0):
         res[name] = {"threshold": t, "auc": auc(rs), "auc_ci": bootstrap_ci(rs, auc, n_boot, seed),
                      "tpr": tpr, "tpr_ci": bootstrap_ci(rs, lambda x: rates(x, t)[0], n_boot, seed),
                      "fpr": fpr, "fpr_ci": bootstrap_ci(rs, lambda x: rates(x, t)[1], n_boot, seed),
-                     "unscored": sum(not r["scores"] for r in scored[name]), "rows": rs}
+                     "unscored": sum(not r["scores"] for r in scored[name]), "rows": rs,
+                     "rules": {k: _at(rs, rule(as_rows(val, f)), n_boot, seed) for k, rule in RULES.items()}}
+    if base_test is not None:
+        b = {r["benchmark_id"]: r for r in base_test}
+        rs = [r for r in base_test if r["benchmark_id"] in common]
+        t = youden_threshold(base_val)
+        res["baseline"] = {"auc": auc(rs), "auc_ci": bootstrap_ci(rs, auc, n_boot, seed), **_at(rs, t, n_boot, seed),
+                           "unscored": sum(not any(v is not None for v in r["scores"].values()) for r in base_test),
+                           "rows": rs, "rules": {k: _at(rs, rule(base_val), n_boot, seed) for k, rule in RULES.items()}}
+        for name in combiners:
+            mine = [r for r in res[name]["rows"] if r["benchmark_id"] in b]
+            lo, hi = auc_diff_ci(mine, rs, n_boot, seed)
+            res[name]["vs_baseline"] = {"diff": auc(mine) - auc(rs), "ci": (lo, hi)}
     return res, w
 
 def main(argv=None):
@@ -84,11 +127,16 @@ def main(argv=None):
     p.add_argument("--test", required=True)
     p.add_argument("--method", default="ast10-split")
     p.add_argument("--n-boot", type=int, default=2000)
+    p.add_argument("--baseline", help="a method in the same validation and test runs to compare against, e.g. naive-llm")
+    p.add_argument("--json", help="also write weights, thresholds and results here, for scripts")
     a = p.parse_args(argv)
     (ct, tr), (cv, va), (cx, te) = (load_run(a.train, "train", a.method), load_run(a.val, "validation", a.method),
                                     load_run(a.test, "test", a.method))
     check_compatible([ct, cv, cx])
-    res, w = evaluate(tr, va, te, a.n_boot)
+    bv = bt = None
+    if a.baseline:
+        bv, bt = load_run(a.val, "validation", a.baseline)[1], load_run(a.test, "test", a.baseline)[1]
+    res, w = evaluate(tr, va, te, a.n_boot, base_val=bv, base_test=bt)
     mal = sum(r["label"] for r in te)
     print(f"train skills: {len(tr)}, validation skills: {len(va)}, test skills: {len(te)} ({mal} malicious, {len(te) - mal} benign)\n")
     print("| combiner | threshold (from validation) | test AUC [95% CI] | test TPR [95% CI] | test FPR [95% CI] | unscored |")
@@ -103,6 +151,22 @@ def main(argv=None):
     print("\n| logreg weight | " + " | ".join(["intercept"] + CHECK_IDS) + " |")
     print("|---|" + "---|" * len(w))
     print("| value | " + " | ".join(f"{x:+.2f}" for x in w) + " |")
+    print("\n| combiner | threshold rule (on validation) | threshold | test TPR [95% CI] | test FPR [95% CI] |")
+    print("|---|---|---|---|---|")
+    for m, r in res.items():
+        for k, v in r["rules"].items():
+            print(f"| {m} | {k} | {v['threshold']:.3f} | {ci(v['tpr'], v['tpr_ci'])} | {ci(v['fpr'], v['fpr_ci'])} |")
+    if a.baseline:
+        print(f"\nBaseline {a.baseline}: test AUC {ci(res['baseline']['auc'], res['baseline']['auc_ci'])}\n")
+        print(f"| paired difference on test | AUC diff [95% CI] |\n|---|---|")
+        for m in ("logreg", "AST04", "max"):
+            d = res[m]["vs_baseline"]
+            print(f"| {m} - {a.baseline} | {d['diff']:+.3f} [{d['ci'][0]:+.3f}, {d['ci'][1]:+.3f}] |")
+    if a.json:
+        keep = ("threshold", "auc", "auc_ci", "tpr", "fpr", "unscored", "rules", "vs_baseline")
+        out = {"method": a.method, "baseline": a.baseline, "weights": w,
+               "results": {m: {k: v for k, v in r.items() if k in keep} for m, r in res.items()}}
+        pathlib.Path(a.json).write_text(json.dumps(out, indent=2))
 
 if __name__ == "__main__":
     main()

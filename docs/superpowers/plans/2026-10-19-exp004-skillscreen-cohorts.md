@@ -76,10 +76,12 @@ uv run python -m svb.skillscreen compare runs/<test> --method ast10-split --comb
 
 | Task | Owner | Notes |
 |---|---|---|
-| `svb.run --ids FILE`: restrict the loaded part to listed IDs, like `--exclude`; write `ids` to `config.json` only when used | local | `svb/run.py` |
-| `svb.heldout`: the two extra thresholds (TPR ≥ 0.95, FPR ≤ 0.05 on validation), and a `naive-llm` row | local | `svb/heldout.py` |
+| `svb.run --ids FILE` and `--out DIR` | cloud | done; `ids_file` is written to `config.json` only when used |
+| `svb.heldout`: `tpr95` and `fpr05` thresholds from validation, `--baseline naive-llm`, `--json` | cloud | done |
 | `svb.skillscreen`: `--combine max\|AST01..AST05\|logreg`, `--weights`, `--paired` against SkillScreen files or our exported CSVs | cloud | done in this PR |
-| Probe, pre-registration, runs, write-up | local | about 19 hours of Ollama time in all (table below) |
+| Pre-registration (`docs/experiments/004-skillscreen-cohorts.md`) and the unattended runner (`scripts/exp004_overnight.sh`) | cloud | done; dry-run end to end against a fake model |
+| Start the runner and report (`docs/superpowers/plans/2026-10-19-overnight-brief.md`) | local | about 19 hours of Ollama time in all (table below) |
+| Results write-up | cloud | from `runs/exp004/summary.md` |
 | Review PRs, write up results from the printed tables, update the comparison page | cloud | |
 
 ## Cost at 12 seconds per skill (`ast10-split`) plus about 2 for `naive-llm`

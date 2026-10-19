@@ -62,6 +62,8 @@ OPENROUTER_API_KEY=... uv run python -m svb.run --backend openrouter --model clo
 
 Experiment 004 runs unattended on hosted `cloudflare/clef-flash`, served by Cloudflare only (pre-registration amendments 1 and 2): export `OPENROUTER_API_KEY`, then `bash scripts/exp004_overnight.sh` (start it with `nohup`; see `docs/superpowers/plans/2026-10-19-overnight-brief.md`). It resumes where it stopped and writes `runs/exp004/summary.md`.
 
+The experiment 004 dashboard is a static page in `site/`, published to GitHub Pages by `.github/workflows/pages.yml` on every push to `main` that changes it. To rebuild its data after a new run, copy the run into `results/exp004/` and run `uv run python scripts/build_dashboard.py --skillscreen ../SkillScreen` (it writes `site/data.json`; scores and ids only, no skill text).
+
 Runs created before `--part` existed (including experiment 001) have no `part` in their `config.json`, so `--resume` refuses them. They can still be scored; to continue one, start a fresh run.
 
 ## Related work

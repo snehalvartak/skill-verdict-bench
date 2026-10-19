@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill Verdict Bench: Experiment 004</title>
+<meta name="description" content="How well does a decision model detect malicious agent skills? Experiment 004 results on SkillScreen's held-out test sets.">
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #f4f3f0;
+  --surface-1: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #6b6a66;
+  --axis: #898781;
+  --grid: #e1e0d9;
+  --border: rgba(11, 11, 11, 0.10);
+  --accent: #2a78d6;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300;
+  --bar-ours: #2a78d6; --bar-theirs: #eda100;
+  --good: #006300;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-0: #111110; --surface-1: #1a1a19;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #a3a29b;
+    --axis: #898781; --grid: #2c2c2a; --border: rgba(255, 255, 255, 0.10); --accent: #3987e5;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
+    --bar-ours: #3987e5; --bar-theirs: #c98500; --good: #0ca30c;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #111110; --surface-1: #1a1a19;
+  --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #a3a29b;
+  --axis: #898781; --grid: #2c2c2a; --border: rgba(255, 255, 255, 0.10); --accent: #3987e5;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
+  --bar-ours: #3987e5; --bar-theirs: #c98500; --good: #0ca30c;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--surface-0); color: var(--text-primary);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+main { max-width: 1120px; margin: 0 auto; padding: 24px 16px 64px; }
+header h1 { font-size: 26px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -0.01em; }
+header p { margin: 0; color: var(--text-secondary); max-width: 760px; }
+header .meta { margin-top: 8px; font-size: 13px; color: var(--text-muted); }
+a { color: var(--accent); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 20px 0 16px; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface-1); }
+.seg button { border: 0; background: none; color: var(--text-secondary); font: inherit; font-size: 14px; padding: 7px 14px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { background: var(--text-primary); color: var(--surface-1); font-weight: 600; }
+.spacer { flex: 1; }
+.ghost { border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary); border-radius: 8px; font: inherit; font-size: 13px; padding: 6px 12px; cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible, svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile, .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; }
+.tile { padding: 14px 16px; }
+.tile .k { font-size: 13px; color: var(--text-secondary); }
+.tile .v { font-size: 28px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.tile .s { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.tile .v.good { color: var(--good); }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.card { padding: 16px; margin-bottom: 16px; min-width: 0; }
+.card h2 { font-size: 16px; margin: 0 0 2px; }
+.card .sub { font-size: 13px; color: var(--text-secondary); margin: 0 0 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 8px; font-size: 13px; }
+.legend button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 2px 0; font: inherit; color: var(--text-secondary); cursor: pointer; }
+.legend button[aria-pressed="false"] { opacity: 0.4; }
+.key { display: inline-block; width: 18px; height: 0; border-top: 2px solid; }
+.key.dash { border-top-style: dashed; }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: none; }
+.chart text { fill: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.chart .lbl { fill: var(--text-secondary); font-size: 12px; }
+.tip { position: absolute; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12); min-width: 170px; display: none; z-index: 2; }
+.tip .h { color: var(--text-secondary); margin-bottom: 4px; }
+.tip .row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.tip .row span:first-child { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+.tip strong { font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.controls { display: grid; gap: 10px; margin-bottom: 12px; }
+.controls label { font-size: 13px; color: var(--text-secondary); display: block; margin-bottom: 4px; }
+select { font: inherit; font-size: 14px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); width: 100%; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.presets button { font-size: 12px; padding: 4px 10px; }
+.presets button[aria-pressed="true"] { border-color: var(--accent); color: var(--text-primary); font-weight: 600; }
+.readout { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 12px; }
+.readout > div { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+.readout .k { font-size: 12px; color: var(--text-secondary); }
+.readout .v { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.confusion { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.confusion th, .confusion td { border: 1px solid var(--border); padding: 6px 8px; text-align: center; }
+.confusion th { font-weight: 500; color: var(--text-secondary); }
+table.data { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.data th { text-align: left; font-weight: 500; color: var(--text-secondary); border-bottom: 1px solid var(--grid); padding: 6px 8px; }
+table.data td { border-bottom: 1px solid var(--grid); padding: 6px 8px; }
+table.data td.n, table.data th.n { text-align: right; }
+.scroll { overflow-x: auto; }
+.notes { font-size: 13px; color: var(--text-secondary); }
+.notes li { margin-bottom: 6px; }
+footer { font-size: 12px; color: var(--text-muted); margin-top: 24px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Do targeted risk checks catch malicious agent skills?</h1>
+  <p>Experiment 004 scores SkillScreen's held-out test sets with the decision model <code>clef-flash</code>. It compares five targeted per-risk questions (combined three ways) against one generic "is this malicious?" question, and places both next to methods SkillScreen published.</p>
+  <p class="meta" id="meta"></p>
+</header>
+
+<div class="toolbar" role="group" aria-label="Filters">
+  <div class="seg" id="split" role="group" aria-label="Test set">
+    <button type="button" data-p="sd" aria-pressed="true">Source-disjoint</button>
+    <button type="button" data-p="msd" aria-pressed="false">Structurally disjoint</button>
+  </div>
+  <span class="spacer"></span>
+  <button type="button" class="ghost" id="theme" aria-label="Toggle colour theme">Theme</button>
+</div>
+
+<section class="tiles" id="tiles" aria-label="Headline numbers"></section>
+
+<div class="grid2">
+  <section class="card" aria-labelledby="roc-h">
+    <h2 id="roc-h">ROC curves on the test set</h2>
+    <p class="sub">True positive rate against false positive rate for every threshold. Solid lines are <code>clef-flash</code>; dashed lines are SkillScreen's published methods. Hover or use the arrow keys to read every method at one false positive rate.</p>
+    <div class="legend" id="legend"></div>
+    <div class="chart" id="roc"><div class="tip" id="roc-tip" role="status"></div></div>
+  </section>
+
+  <section class="card" aria-labelledby="thr-h">
+    <h2 id="thr-h">Threshold explorer</h2>
+    <p class="sub">Pick a method and a threshold. The presets are the thresholds chosen on the validation set before the test set was scored.</p>
+    <div class="controls">
+      <div><label for="method">Method</label><select id="method"></select></div>
+      <div><label for="slider">Threshold: <strong id="thr-v"></strong></label><input type="range" id="slider" min="0" max="1000" step="1"></div>
+      <div class="presets" id="presets"></div>
+    </div>
+    <div class="readout" id="readout"></div>
+    <table class="confusion" id="confusion" aria-label="Confusion matrix"></table>
+  </section>
+</div>
+
+<section class="card" aria-labelledby="src-h">
+  <h2 id="src-h">Flagged by source</h2>
+  <p class="sub" id="src-sub"></p>
+  <div class="legend" id="src-legend"></div>
+  <div class="chart" id="src"><div class="tip" id="src-tip" role="status"></div></div>
+</section>
+
+<section class="card" aria-labelledby="tbl-h">
+  <h2 id="tbl-h">All methods</h2>
+  <p class="sub">AUROC on the test set. Intervals are 95% paired bootstraps from the analysis (2,000 resamples by skill); rows without one are computed here from the scores.</p>
+  <div class="scroll"><table class="data" id="table"></table></div>
+</section>
+
+<section class="card notes" aria-labelledby="notes-h">
+  <h2 id="notes-h">How to read this</h2>
+  <ul>
+    <li><strong>Pre-registered:</strong> the headline differences (P1 on source-disjoint, P2 on structurally disjoint), the combiners and the validation thresholds. The source chart at a moving threshold, and any threshold you pick here, are exploratory.</li>
+    <li><strong>Combiners:</strong> <em>logreg</em> is a logistic regression on the five check scores fitted on 300 training skills; <em>max</em> takes the highest check; <em>AST04</em> uses one check alone; <em>generic-1q</em> is the single generic question.</li>
+    <li><strong>Model:</strong> hosted <code>cloudflare/clef-flash</code> through OpenRouter, served by Cloudflare only. OpenRouter returned no dated version, so a silent model change during the run would not be detected.</li>
+    <li><strong>Unscored:</strong> one structurally disjoint test skill is over the model's 24,576-token context and has no score; it is left out of the curves.</li>
+    <li><strong>SkillScreen's methods</strong> are different models scored by their authors; comparisons with them are descriptive only.</li>
+  </ul>
+</section>
+
+<footer>
+  Data: <a href="https://huggingface.co/datasets/ProtectSkills/MaliciousSkillBench">MaliciousSkillBench</a> (CC BY 4.0) and SkillScreen predictions (Huang et al., 2026, CC BY 4.0). Scores and ids only; no skill text is published here.
+  Source and raw results: <a href="https://github.com/snehalvartak/skill-verdict-bench">snehalvartak/skill-verdict-bench</a>, <code>results/exp004/</code>.
+</footer>
+</main>
+
+<script>
+"use strict";
+const SERIES = [
+  { k: "logreg", name: "Targeted checks, logreg", c: "--s1", ours: true },
+  { k: "max", name: "Targeted checks, max", c: "--s2", ours: true },
+  { k: "generic", name: "Generic question", c: "--s3", ours: true },
+  { k: "skillscreen", name: "SkillScreen (fine-tuned)", c: "--s4" },
+  { k: "gpt55", name: "GPT-5.5 judge", c: "--s5" },
+  { k: "typesafe", name: "TypeSafe Jev 1.13", c: "--s6" },
+];
+const METHODS = [
+  { k: "logreg", name: "Targeted checks, logreg" }, { k: "max", name: "Targeted checks, max" },
+  { k: "AST04", name: "Check AST04 alone" }, { k: "generic", name: "Generic question" },
+  { k: "skillscreen", name: "SkillScreen (fine-tuned)" }, { k: "gpt55", name: "GPT-5.5 judge" }, { k: "typesafe", name: "TypeSafe Jev 1.13" },
+];
+const TABLE_ROWS = [...METHODS.slice(0, 4),
+  ...["AST01", "AST02", "AST03", "AST05"].map(k => ({ k, name: `Check ${k} alone` })), ...METHODS.slice(4)];
+const RULES = { youden: "Youden's J", tpr95: "TPR ≥ 95%", fpr05: "FPR ≤ 5%" };
+const SVGNS = "http://www.w3.org/2000/svg";
+const state = { p: "sd", hidden: new Set(), method: "logreg", t: null, preset: "fpr05", fx: null };
+let DATA, cache = {};
+
+const $ = id => document.getElementById(id);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const el = (tag, attrs = {}, parent) => {
+  const n = document.createElementNS(SVGNS, tag);
+  for (const [a, v] of Object.entries(attrs)) n.setAttribute(a, v);
+  if (parent) parent.appendChild(n);
+  return n;
+};
+const h = (tag, text, cls) => { const n = document.createElement(tag); if (text != null) n.textContent = text; if (cls) n.className = cls; return n; };
+const pct = x => x == null ? "–" : (100 * x).toFixed(1) + "%";
+const f3 = x => x == null ? "–" : x.toFixed(3);
+const signed = x => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(3);
+
+function pairs(p, k) {  // [score, label] for scored skills
+  return DATA.protocols[p].skills.filter(s => s.s[k] != null).map(s => [s.s[k], s.y]);
+}
+function auroc(ps) {  // Mann-Whitney with ties
+  const a = ps.slice().sort((x, y) => x[0] - y[0]);
+  let pos = 0, neg = 0, rankSum = 0;
+  for (let i = 0; i < a.length;) {
+    let j = i; while (j < a.length && a[j][0] === a[i][0]) j++;
+    const r = (i + j + 1) / 2;
+    for (let m = i; m < j; m++) if (a[m][1] === 1) { rankSum += r; pos++; } else neg++;
+    i = j;
+  }
+  return (rankSum - pos * (pos + 1) / 2) / (pos * neg);
+}
+function roc(ps) {  // points from the strictest threshold down, one per distinct score
+  const a = ps.slice().sort((x, y) => y[0] - x[0]);
+  const P = a.filter(x => x[1] === 1).length, N = a.length - P;
+  const pts = [[0, 0]]; let tp = 0, fp = 0;
+  for (let i = 0; i < a.length;) {
+    let j = i; while (j < a.length && a[j][0] === a[i][0]) { a[j][1] === 1 ? tp++ : fp++; j++; }
+    pts.push([fp / N, tp / P]); i = j;
+  }
+  return pts;
+}
+function tprAt(pts, x) { let best = 0; for (const [f, t] of pts) { if (f <= x + 1e-12) best = Math.max(best, t); else break; } return best; }
+function stats(p, k, t) {
+  let tp = 0, fp = 0, tn = 0, fn = 0, un = 0;
+  for (const s of DATA.protocols[p].skills) {
+    const v = s.s[k];
+    if (v == null) { un++; continue; }
+    const flag = v >= t;
+    if (s.y === 1) flag ? tp++ : fn++; else flag ? fp++ : tn++;
+  }
+  return { tp, fp, tn, fn, un, tpr: tp / (tp + fn), fpr: fp / (fp + tn), prec: tp + fp ? tp / (tp + fp) : null };
+}
+function get(p, k) {
+  const key = p + "|" + k;
+  if (!cache[key]) { const ps = pairs(p, k); cache[key] = { auc: auroc(ps), roc: roc(ps), scores: [...new Set(ps.map(x => x[0]))].sort((a, b) => a - b) }; }
+  return cache[key];
+}
+
+// ---------- tiles ----------
+function tiles() {
+  const P = DATA.protocols[state.p], box = $("tiles");
+  box.replaceChildren();
+  const pos = P.skills.filter(s => s.y === 1).length, neg = P.skills.length - pos;
+  const d = P.vs_generic.logreg, a = P.auc;
+  const tile = (k, v, s, good) => { const t = h("div", null, "tile"); t.append(h("div", k, "k"), h("div", v, "v" + (good ? " good" : "")), h("div", s, "s")); box.append(t); };
+  tile("Test skills", P.skills.length.toLocaleString(), `${pos.toLocaleString()} malicious · ${neg.toLocaleString()} benign`);
+  tile("Targeted checks (logreg) AUROC", f3(a.logreg.auc), `95% CI ${f3(a.logreg.ci[0])} – ${f3(a.logreg.ci[1])}`);
+  tile("Generic question AUROC", f3(a.generic.auc), `95% CI ${f3(a.generic.ci[0])} – ${f3(a.generic.ci[1])}`);
+  tile(`${state.p === "sd" ? "P1" : "P2"}: logreg − generic`, signed(d.diff), `95% CI ${signed(d.ci[0])} to ${signed(d.ci[1])}`, d.ci[0] > 0);
+}
+
+// ---------- ROC ----------
+const RM = { l: 48, r: 16, t: 12, b: 40 };
+let RW = 560, RH = 440;
+function rocChart() {
+  const box = $("roc"), tip = $("roc-tip");
+  RW = Math.max(280, box.clientWidth); RH = Math.round(Math.min(460, Math.max(300, RW * 0.8)));
+  box.querySelector("svg")?.remove();
+  const legend = $("legend"); legend.replaceChildren();
+  for (const s of SERIES) {
+    const b = h("button"); b.type = "button"; b.setAttribute("aria-pressed", String(!state.hidden.has(s.k)));
+    const key = h("span", null, "key" + (s.ours ? "" : " dash")); key.style.borderTopColor = css(s.c);
+    b.append(key, document.createTextNode(`${s.name} (${f3(get(state.p, s.k).auc)})`));
+    b.onclick = () => { state.hidden.has(s.k) ? state.hidden.delete(s.k) : state.hidden.add(s.k); rocChart(); };
+    legend.append(b);
+  }
+  const W = RW - RM.l - RM.r, H = RH - RM.t - RM.b, X = x => RM.l + x * W, Y = y => RM.t + (1 - y) * H;
+  const svg = el("svg", { viewBox: `0 0 ${RW} ${RH}`, role: "img", tabindex: "0", "aria-label": "ROC curves; use left and right arrow keys to move the readout" });
+  box.prepend(svg);
+  for (let i = 0; i <= 5; i++) {
+    const v = i / 5;
+    el("line", { x1: X(0), x2: X(1), y1: Y(v), y2: Y(v), stroke: css("--grid"), "stroke-width": 1 }, svg);
+    el("line", { y1: Y(0), y2: Y(1), x1: X(v), x2: X(v), stroke: css("--grid"), "stroke-width": 1 }, svg);
+    el("text", { x: RM.l - 8, y: Y(v) + 4, "text-anchor": "end" }, svg).textContent = v.toFixed(1);
+    el("text", { x: X(v), y: RH - RM.b + 18, "text-anchor": "middle" }, svg).textContent = v.toFixed(1);
+  }
+  el("line", { x1: X(0), y1: Y(0), x2: X(1), y2: Y(1), stroke: css("--axis"), "stroke-width": 1, "stroke-dasharray": "2 4" }, svg);
+  el("text", { x: X(0.5), y: RH - 4, "text-anchor": "middle", class: "lbl" }, svg).textContent = "False positive rate";
+  const yl = el("text", { x: 12, y: Y(0.5), "text-anchor": "middle", class: "lbl", transform: `rotate(-90 12 ${Y(0.5)})` }, svg); yl.textContent = "True positive rate";
+  const shown = SERIES.filter(s => !state.hidden.has(s.k));
+  for (const s of shown) {
+    const pts = get(state.p, s.k).roc;
+    let d = `M${X(0)},${Y(0)}`;
+    for (let i = 1; i < pts.length; i++) d += `H${X(pts[i][0]).toFixed(1)}V${Y(pts[i][1]).toFixed(1)}`;
+    el("path", { d, fill: "none", stroke: css(s.c), "stroke-width": 2, "stroke-linejoin": "round", "stroke-dasharray": s.ours ? "" : "6 4" }, svg);
+  }
+  const cross = el("line", { y1: Y(0), y2: Y(1), stroke: css("--text-muted"), "stroke-width": 1, visibility: "hidden" }, svg);
+  const dots = shown.map(s => el("circle", { r: 4, fill: css(s.c), stroke: css("--surface-1"), "stroke-width": 2, visibility: "hidden" }, svg));
+  const hit = el("rect", { x: X(0), y: Y(1), width: W, height: H, fill: "transparent" }, svg);
+  function show(fx) {
+    state.fx = fx;
+    if (fx == null) { cross.setAttribute("visibility", "hidden"); dots.forEach(d => d.setAttribute("visibility", "hidden")); tip.style.display = "none"; return; }
+    cross.setAttribute("x1", X(fx)); cross.setAttribute("x2", X(fx)); cross.setAttribute("visibility", "visible");
+    tip.replaceChildren(h("div", `At false positive rate ${pct(fx)}`, "h"));
+    const vals = shown.map((s, i) => { const t = tprAt(get(state.p, s.k).roc, fx); dots[i].setAttribute("cx", X(fx)); dots[i].setAttribute("cy", Y(t)); dots[i].setAttribute("visibility", "visible"); return [s, t]; });
+    vals.sort((a, b) => b[1] - a[1]);
+    for (const [s, t] of vals) {
+      const row = h("div", null, "row"), lab = h("span"), key = h("span", null, "key" + (s.ours ? "" : " dash"));
+      key.style.borderTopColor = css(s.c); lab.append(key, document.createTextNode(s.name));
+      row.append(lab, h("strong", pct(t))); tip.append(row);
+    }
+    tip.style.display = "block";
+    const r = svg.getBoundingClientRect(), sx = r.width / RW, px = X(fx) * sx;
+    tip.style.top = (RM.t * sx + 8) + "px";
+    tip.style.left = (px + 12 + tip.offsetWidth > r.width ? px - 12 - tip.offsetWidth : px + 12) + "px";
+  }
+  const fromEvent = e => { const r = svg.getBoundingClientRect(); return Math.min(1, Math.max(0, ((e.clientX - r.left) * RW / r.width - RM.l) / W)); };
+  hit.addEventListener("pointermove", e => show(fromEvent(e)));
+  hit.addEventListener("pointerdown", e => show(fromEvent(e)));
+  svg.addEventListener("pointerleave", () => show(null));
+  svg.addEventListener("keydown", e => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    e.preventDefault(); const step = e.shiftKey ? 0.1 : 0.01;
+    show(Math.min(1, Math.max(0, (state.fx ?? 0.05) + (e.key === "ArrowRight" ? step : -step))));
+  });
+  svg.addEventListener("focus", () => show(state.fx ?? 0.05));
+  svg.addEventListener("blur", () => show(null));
+}
+
+// ---------- threshold explorer ----------
+function presetsFor(k) {
+  const T = DATA.protocols[state.p].thresholds[k];
+  return T ? Object.entries(RULES).map(([r, name]) => [r, `${name} (val.)`, T[r]]) : [["native", "Native 0.5", 0.5]];
+}
+function sliderToT(v) { const sc = get(state.p, state.method).scores; return sc[Math.round(v / 1000 * (sc.length - 1))]; }
+function tToSlider(t) { const sc = get(state.p, state.method).scores; let i = sc.findIndex(x => x >= t); if (i < 0) i = sc.length - 1; return Math.round(i / Math.max(1, sc.length - 1) * 1000); }
+function setThreshold(t, preset) {
+  state.t = t; state.preset = preset || null;
+  $("slider").value = tToSlider(t);
+  render();
+}
+function explorer() {
+  const sel = $("method");
+  if (!sel.options.length) for (const m of METHODS) { const o = h("option", m.name); o.value = m.k; sel.append(o); }
+  sel.value = state.method;
+  const pr = $("presets"); pr.replaceChildren();
+  for (const [r, name, t] of presetsFor(state.method)) {
+    const b = h("button", name, "ghost"); b.type = "button"; b.setAttribute("aria-pressed", String(state.preset === r));
+    b.onclick = () => setThreshold(t, r); pr.append(b);
+  }
+  const s = stats(state.p, state.method, state.t);
+  $("thr-v").textContent = state.t.toFixed(4);
+  const ro = $("readout"); ro.replaceChildren();
+  for (const [k, v] of [["Recall (TPR)", pct(s.tpr)], ["False positive rate", pct(s.fpr)], ["Precision", pct(s.prec)]]) {
+    const d = h("div"); d.append(h("div", k, "k"), h("div", v, "v")); ro.append(d);
+  }
+  const c = $("confusion"); c.replaceChildren();
+  const hr = h("tr"); hr.append(h("th", ""), h("th", "Flagged"), h("th", "Not flagged")); c.append(hr);
+  const r1 = h("tr"); r1.append(h("th", "Malicious"), h("td", s.tp.toLocaleString()), h("td", s.fn.toLocaleString())); c.append(r1);
+  const r2 = h("tr"); r2.append(h("th", "Benign"), h("td", s.fp.toLocaleString()), h("td", s.tn.toLocaleString())); c.append(r2);
+  if (s.un) { const r3 = h("tr"); const td = h("td", `${s.un} unscored skill left out`); td.colSpan = 3; r3.append(h("th", ""), td); c.append(r3); }
+}
+
+// ---------- by source ----------
+function bySource(k, t) {
+  const g = {};
+  for (const s of DATA.protocols[state.p].skills) {
+    const v = s.s[k]; if (v == null) continue;
+    const key = s.src + "|" + s.y; (g[key] ||= { src: s.src, y: s.y, n: 0, f: 0 }); g[key].n++; if (v >= t) g[key].f++;
+  }
+  return g;
+}
+function sourceChart() {
+  const box = $("src"), tip = $("src-tip");
+  box.querySelector("svg")?.remove();
+  const mName = METHODS.find(m => m.k === state.method).name;
+  const cmp = state.method === "skillscreen" ? null : "skillscreen";
+  $("src-sub").textContent = `Share of each source's skills flagged by ${mName} at threshold ${state.t.toFixed(4)}` +
+    (cmp ? `, next to SkillScreen's fine-tuned model at its native 0.5.` : ".") +
+    " For malicious rows higher is better; for benign rows lower is better.";
+  const lg = $("src-legend"); lg.replaceChildren();
+  const addKey = (name, c) => { const s = h("span"); s.style.display = "inline-flex"; s.style.alignItems = "center"; s.style.gap = "6px"; s.style.color = css("--text-secondary");
+    const sw = h("span"); sw.style.cssText = `width:12px;height:12px;border-radius:3px;background:${css(c)}`; s.append(sw, document.createTextNode(name)); lg.append(s); };
+  addKey(mName, "--bar-ours"); if (cmp) addKey("SkillScreen (fine-tuned) at 0.5", "--bar-theirs");
+  const ours = bySource(state.method, state.t), theirs = cmp ? bySource(cmp, 0.5) : null;
+  const rows = Object.values(ours).sort((a, b) => b.y - a.y || b.n - a.n);
+  const Wd = Math.max(280, box.clientWidth), narrow = Wd < 600, top = narrow ? 18 : 0;
+  const bars = cmp ? 2 : 1, bh = 12, gap = 2, rowH = bars * bh + (bars - 1) * gap + 14 + top;
+  const L = narrow ? 4 : 260, R = 56, Ht = rows.length * rowH + 28;
+  const svg = el("svg", { viewBox: `0 0 ${Wd} ${Ht}`, role: "img", "aria-label": "Flagged share by source" });
+  box.prepend(svg);
+  const X = v => L + v * (Wd - L - R);
+  for (const v of [0, 0.25, 0.5, 0.75, 1]) {
+    el("line", { x1: X(v), x2: X(v), y1: 0, y2: Ht - 22, stroke: css("--grid"), "stroke-width": 1 }, svg);
+    el("text", { x: X(v), y: Ht - 6, "text-anchor": "middle" }, svg).textContent = (v * 100) + "%";
+  }
+  rows.forEach((r, i) => {
+    const y0 = i * rowH + 6 + top;
+    const name = narrow ? el("text", { x: L, y: y0 - 6, class: "lbl" }, svg)
+      : el("text", { x: L - 10, y: y0 + (bars * bh + (bars - 1) * gap) / 2 + 4, "text-anchor": "end", class: "lbl" }, svg);
+    name.textContent = `${r.src.length > 26 ? r.src.slice(0, 25) + "…" : r.src} · ${r.y ? "malicious" : "benign"} (${r.n})`;
+    const set = [[r, "--bar-ours", mName, state.t]];
+    if (cmp) set.push([theirs[r.src + "|" + r.y], "--bar-theirs", "SkillScreen (fine-tuned)", 0.5]);
+    set.forEach(([g, c, label, t], j) => {
+      if (!g) return;
+      const y = y0 + j * (bh + gap), v = g.f / g.n, w = Math.max(0, X(v) - X(0));
+      const grp = el("g", { tabindex: "0", role: "img", "aria-label": `${label}, ${r.src} ${r.y ? "malicious" : "benign"}: ${g.f} of ${g.n} flagged` }, svg);
+      if (w > 0) el("path", { d: `M${X(0)},${y}h${Math.max(0, w - 4)}a4,4 0 0 1 4,4v${bh - 8}a4,4 0 0 1 -4,4h${-Math.max(0, w - 4)}z`, fill: css(c) }, grp);
+      el("rect", { x: X(0), y: y - 1, width: X(1) - X(0) + R, height: bh + 2, fill: "transparent" }, grp);
+      el("text", { x: X(v) + 6, y: y + bh - 2 }, grp).textContent = pct(v);
+      const showTip = () => {
+        tip.replaceChildren(h("div", `${r.src} · ${r.y ? "malicious" : "benign"}`, "h"));
+        const row = h("div", null, "row"); row.append(h("span", `${label} at ${t.toFixed(3)}`), h("strong", `${g.f} / ${g.n}`)); tip.append(row);
+        tip.style.display = "block";
+        const b = svg.getBoundingClientRect(), s = b.width / Wd;
+        tip.style.left = Math.min(b.width - tip.offsetWidth, X(0.5) * s) + "px"; tip.style.top = (y + bh + 6) * s + "px";
+      };
+      grp.addEventListener("pointerenter", showTip); grp.addEventListener("focus", showTip);
+      grp.addEventListener("pointerleave", () => tip.style.display = "none"); grp.addEventListener("blur", () => tip.style.display = "none");
+    });
+  });
+}
+
+// ---------- table ----------
+function table() {
+  const P = DATA.protocols[state.p], t = $("table"); t.replaceChildren();
+  const hr = h("tr"); for (const [x, n] of [["Method", 0], ["AUROC", 1], ["95% CI", 1], ["vs generic question", 1], ["Recall at FPR ≤ 5% (val.)", 1], ["FPR at that threshold", 1]]) { const th = h("th", x); if (n) th.className = "n"; hr.append(th); }
+  t.append(hr);
+  for (const m of TABLE_ROWS) {
+    const a = P.auc[m.k], vs = P.vs_generic[m.k], T = P.thresholds[m.k];
+    const st = T ? stats(state.p, m.k, T.fpr05) : null;
+    const tr = h("tr"); tr.append(h("td", m.name));
+    const cells = [f3(a ? a.auc : get(state.p, m.k).auc), a ? `${f3(a.ci[0])} – ${f3(a.ci[1])}` : "–",
+      vs ? `${signed(vs.diff)} [${signed(vs.ci[0])}, ${signed(vs.ci[1])}]` : "–", st ? pct(st.tpr) : "–", st ? pct(st.fpr) : "–"];
+    for (const c of cells) { const td = h("td", c); td.className = "n"; tr.append(td); }
+    t.append(tr);
+  }
+}
+
+function render() { tiles(); rocChart(); explorer(); sourceChart(); table(); }
+
+function selectProtocol(p) {
+  state.p = p;
+  for (const b of $("split").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.p === p));
+  resetThreshold();
+}
+function resetThreshold() {
+  const pre = presetsFor(state.method), pick = pre.find(x => x[0] === "fpr05") || pre[0];
+  state.t = pick[2]; state.preset = pick[0]; $("slider").value = tToSlider(state.t); render();
+}
+
+fetch("data.json").then(r => r.json()).then(d => {
+  DATA = d;
+  $("meta").textContent = `Model: ${d.model}, served as ${d.served.split("|").slice(0, 2).join(" by ")}. Methods: five targeted OWASP AST checks and one generic question per skill.`;
+  for (const b of $("split").querySelectorAll("button")) b.onclick = () => selectProtocol(b.dataset.p);
+  $("method").onchange = e => { state.method = e.target.value; resetThreshold(); };
+  $("slider").oninput = e => { state.t = sliderToT(+e.target.value); state.preset = null; render(); };
+  $("theme").onclick = () => {
+    const root = document.documentElement, dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark"; try { localStorage.setItem("svb-theme", root.dataset.theme); } catch (e) {}
+    render();
+  };
+  try { const t = localStorage.getItem("svb-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+  let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { rocChart(); sourceChart(); }, 150); });
+  selectProtocol("sd");
+}).catch(e => { $("tiles").textContent = "Could not load data.json: " + e.message; });
+</script>
+</body>
+</html>

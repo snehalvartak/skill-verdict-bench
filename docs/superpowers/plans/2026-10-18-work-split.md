@@ -27,9 +27,9 @@ If a change needs a file the other side owns, say so in the PR description and k
      ```bash
      uv run python -m svb.skillscreen probe --skillscreen ../SkillScreen --out probe-ids.txt   # 100 SkillHarm + 90 SkillFortifyBench benign
      uv run python -m svb.run --split source_disjoint --part test --ids probe-ids.txt --methods ast10 naive-llm
-     uv run python -m svb.skillscreen compare runs/<id> --method ast10 --skillscreen ../SkillScreen --protocol sd
+     uv run python -m svb.skillscreen compare runs/<id> --method ast10 --skillscreen ../SkillScreen --protocol sd --threshold 0.1
      ```
-   - Report AUROC on the probe set and the score distributions only. Choose no threshold from it. Say in the write-up that this looked at test data.
+   - Report AUROC on the probe set and the score distributions only. `--threshold` is required, but its recall and FPR columns mean nothing here; choose no threshold from the probe. Say in the write-up that this looked at test data.
 4. **Experiment 004.** Fit on `m_structural_disjoint` and `source_disjoint` validation, then score SkillScreen's full test cohorts with `svb.skillscreen compare`. Batched `ast10` costs one call per skill; experiment 002 found batching does not change AUC. Use `ast10-split` only if 003 shows the learned combination helps.
 
 ## Cloud agent

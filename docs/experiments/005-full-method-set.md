@@ -54,3 +54,34 @@ Re-running is always safe: finished steps are skipped and partial runs resume. R
 ## After the run
 
 The dashboard build reads `runs/exp005` and writes ids and scores only. Because every skill now has every LLM method's score beside SkillScreen's, the explorer's side-by-side shows one skill across methods and the published models, which was not possible across 001 to 004.
+
+## Results
+
+Run on 2026-10-19 from commit `41c4805`, hosted `cloudflare/clef-flash` on provider `cloudflare`, served as `cloudflare/clef-flash|Cloudflare|unpinned`. Cost $2.37. Raw output is in [`results/exp005/`](../../results/exp005/); the figures are explorable on the [dashboard](https://snehalvartak.github.io/skill-verdict-bench/). SD is the source-disjoint test set (1,384 skills), MSD the structurally disjoint one (1,947; one skill unscored for context length).
+
+**R1, reproducibility.** For `ast10-split` and `generic-1q`, 005 scores equal 004's on every skill in both protocols: Spearman 1.0000, largest absolute difference 0.0000, identical AUROC. No sign that the served model changed between the runs. The check cannot rule out a change that happened before 004.
+
+**P1, P2 (replication).** `ast10-split` `logreg` minus `generic-1q`, test AUROC: SD +0.139 [0.105, 0.172] (004: +0.139), MSD +0.128 [0.106, 0.154] (004: +0.129). Same direction and size as 004, as expected from identical scores.
+
+**P3 (batching).** `ast10-split` `max` minus `ast10` `max`: SD +0.015 [-0.009, +0.038], MSD +0.018 [+0.004, +0.032]. Test AUROCs: split 0.672 and 0.824, batched 0.656 and 0.806. Five separate calls are not distinguishable from one call on SD and slightly better on MSD. 002's finding that batching changes little holds on SD and weakens on MSD, where the interval excludes zero by a small margin.
+
+**R2, R3 (descriptive).**
+
+| Test set | Method | AUROC |
+|---|---|---|
+| SD | `ast10-split` max / logreg | 0.672 / 0.658 |
+| SD | `ast10` max | 0.656 |
+| SD | `generic-1q` | 0.518 |
+| SD | TypeSafe / GPT-5.5 / SkillScreen seed 42 | 0.652 / 0.914 / 0.903 |
+| MSD | `ast10-split` max / logreg | 0.824 / 0.831 |
+| MSD | `ast10` max | 0.806 |
+| MSD | `generic-1q` | 0.703 |
+| MSD | TypeSafe / GPT-5.5 / SkillScreen | 0.841 / 0.950 / 0.992 |
+
+Paired against TypeSafe, `logreg` is level on both sets (SD +0.006 [-0.027, +0.039], MSD -0.010 [-0.029, +0.008]). GPT-5.5 and SkillScreen are well ahead (SD about -0.25, MSD -0.12 to -0.16).
+
+**Threshold transfer.** Thresholds chosen on validation for 5% false positives gave test false-positive rates of 4.0% to 8.6% on SD and recall of 17% to 24%, so they held on false positives but caught few malicious skills.
+
+**R4 (flagged counts per source)** is available per source in the dashboard's failure heat map; the table was not written up here. On SkillHarm (728 malicious skills in SD) the `max` combiner at its `fpr05` threshold flags 97 and SkillScreen 695. A reading of 20 sampled SkillHarm misses found 18 where `SKILL.md` only points the agent to a mandatory preflight or setup step in a file that is not in the dataset. The sample was chosen by score, and the label, not the text, says these skills are harmful. SkillHarm has no benign skills in the SD test set, so SkillScreen's overall AUROC there may partly reflect source style.
+
+**Limits unchanged from the pre-registration:** unpinned hosted model, one seed, small train and validation samples, only `SKILL.md` text scored, comparisons with other models descriptive only.

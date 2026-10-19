@@ -1,8 +1,10 @@
 # skill-verdict-bench
 
-How well does a local decision model detect malicious agent skills?
+How well does a decision model detect malicious agent skills?
 
-This repo is an evaluation harness. It sends each skill's `SKILL.md` text to a local decision model (`clef-flash`, served by Ollama through `POST /v1/systemone`), turns the model's probability scores into verdicts, and scores them against labeled skills. Three methods are compared:
+**Dashboard: https://snehalvartak.github.io/skill-verdict-bench/** (experiments 001 to 005: score distributions, ROC, where each method fails, and one skill across every experiment and SkillScreen).
+
+This repo is an evaluation harness. It sends each skill's `SKILL.md` text to a decision model (`clef-flash`, served locally by Ollama through `POST /v1/systemone`, or hosted through OpenRouter), turns the model's probability scores into verdicts, and scores them against labeled skills. Three methods are compared:
 
 | Method | What it does |
 |---|---|
@@ -28,13 +30,15 @@ The model's scores are low, so 0.5 is too strict. Ranked by score without a thre
 
 Experiment 002 ran the controls: with the max-of-five and batching held fixed, the AST10 questions still beat generic paraphrases by +0.12 AUC (95% CI +0.05 to +0.20). Batching does not change the aggregate ranking. See [`docs/experiments/002-controls.md`](docs/experiments/002-controls.md). The experiment logs in `docs/experiments/` are written to double as blog material.
 
+Experiments 003 to 005 move to SkillScreen's own test sets, with thresholds and the combination chosen on separate validation data. On the source-disjoint set (1,384 skills) the five questions reach AUROC 0.67 against 0.52 for the generic question; on the structurally disjoint set (1,947) 0.83 against 0.70. They are level with SkillScreen's TypeSafe baseline and well behind its fine-tuned model (0.90 and 0.99) and a GPT-5.5 judge. Experiment 005 re-ran everything on one hosted model and reproduced 004 exactly. Splitting the five questions into five calls is not distinguishable from batching them on the source-disjoint set. See [`docs/experiments/004-skillscreen-cohorts.md`](docs/experiments/004-skillscreen-cohorts.md) and [`005-full-method-set.md`](docs/experiments/005-full-method-set.md), and the raw output in `results/`. The experiment logs in `docs/experiments/` are written to double as blog material.
+
 ## Run it
 
 Requires Python 3.11+, [uv](https://docs.astral.sh/uv/) and a running [Ollama](https://ollama.com) with a `clef-flash` model that supports the `systemone` endpoint.
 
 ```bash
 uv sync
-uv run pytest -q                                   # 119 tests, no Ollama needed
+uv run pytest -q                                   # 122 tests, no Ollama needed
 uv run python -m svb.run --n 200 --seed 0          # prints a run dir under runs/
 uv run python -m svb.score runs/<run_id>           # metrics, AUC and threshold-sweep tables
 uv run python -m svb.heldout --train runs/<train> --val runs/<val> --test runs/<test>   # held-out evaluation
@@ -62,7 +66,9 @@ OPENROUTER_API_KEY=... uv run python -m svb.run --backend openrouter --model clo
 
 Experiment 004 runs unattended on hosted `cloudflare/clef-flash`, served by Cloudflare only (pre-registration amendments 1 and 2): export `OPENROUTER_API_KEY`, then `bash scripts/exp004_overnight.sh` (start it with `nohup`; see `docs/superpowers/plans/2026-10-19-overnight-brief.md`). It resumes where it stopped and writes `runs/exp004/summary.md`.
 
-The experiment 004 dashboard is a static page in `site/`, published to GitHub Pages by `.github/workflows/pages.yml` on every push to `main` that changes it. To rebuild its data after a new run, copy the run into `results/exp004/` and run `uv run python scripts/build_dashboard.py --skillscreen ../SkillScreen` (it writes `site/data.json`; scores and ids only, no skill text).
+Experiment 005 repeats the three LLM methods on the same hosted model: `bash scripts/exp005_overnight.sh`, results in `runs/exp005/summary.md` and, once copied, `results/exp005/`.
+
+The [dashboard](https://snehalvartak.github.io/skill-verdict-bench/) is a static page in `site/`, published to GitHub Pages by `.github/workflows/pages.yml` on every push to `main` that changes it. To rebuild its data after a new run, copy the run into `results/exp005/` (experiment 004 stays in `results/exp004/`, read for the side-by-side) and run `uv run python scripts/build_dashboard.py --skillscreen ../SkillScreen`. It writes `site/data.json` and `site/questions.json`: scores and ids only, no skill text.
 
 Runs created before `--part` existed (including experiment 001) have no `part` in their `config.json`, so `--resume` refuses them. They can still be scored; to continue one, start a fresh run.
 
@@ -70,7 +76,7 @@ Runs created before `--part` existed (including experiment 001) have no `part` i
 
 [SkillScreen](https://arxiv.org/abs/2610.17727) (Huang et al., 2026) evaluates detectors on the same benchmark, on its structurally disjoint and source-disjoint splits: a fine-tuned 2B decision model (AUROC 0.992 and 0.916), ModernBERT, a word SVM, LLM judges and static scanners. Its TypeSafe Jev 1.13 baseline asks one fixed question through the same `/v1/systemone` interface, so it is the published counterpart of `generic-1q` here.
 
-The numbers in experiments 001 and 002 come from 200 skills of the `random` split and are not comparable with SkillScreen's. What this repo adds is the per-risk decomposition: one question per OWASP AST risk, scored and compared separately. `svb.skillscreen` scores runs with SkillScreen's rules (tie-averaged AUROC, FPR at 99% recall, missing scores flagged) and compares them skill by skill with its released predictions, which are CC BY 4.0 © SkillScreen contributors and are read from a local clone, not copied here. If you use that comparison, cite SkillScreen too:
+The numbers in experiments 001 to 003 come from 200 skills of the `random` split and are not comparable with SkillScreen's. What this repo adds is the per-risk decomposition: one question per OWASP AST risk, scored and compared separately. `svb.skillscreen` scores runs with SkillScreen's rules (tie-averaged AUROC, FPR at 99% recall, missing scores flagged) and compares them skill by skill with its released predictions, which are CC BY 4.0 © SkillScreen contributors and are read from a local clone, not copied here. If you use that comparison, cite SkillScreen too:
 
 ```bibtex
 @article{huang2026skillscreen,
@@ -93,6 +99,8 @@ The dataset contains real malicious skill text. Treat it as data to read, never 
 svb/systemone.py   decision-model client: local Ollama /v1/systemone or hosted OpenRouter /api/alpha/decisions
 svb/checks.py      AST01 to AST05 questions, threshold, truncation limit
 svb/methods.py     ast10, generic-1q, regex, and the controls generic-5q and ast10-split
+site/              the dashboard (static); scripts/ holds the unattended runners and build_dashboard.py
+results/           committed raw output of experiments 004 and 005
 svb/data.py        pinned dataset download and hash check, split filter, stratified sampling
 svb/run.py         run methods over a sample, write predictions.jsonl + config.json
 svb/score.py       precision, recall, F1, AUC, threshold sweep, bootstrap CIs, per-check hit rates and AUC, recall by attack category

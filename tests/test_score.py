@@ -121,3 +121,10 @@ def test_bootstrap_ci_perfect_auc_and_drops_none_resamples():
 def test_bootstrap_ci_is_seeded():
     rows = [S(i % 2, a=(i * 7 % 10) / 10) for i in range(30)]
     assert bootstrap_ci(rows, auc, n_boot=100, seed=3) == bootstrap_ci(rows, auc, n_boot=100, seed=3)
+
+def test_read_predictions_maps_legacy_method_names(tmp_path):
+    import json
+    from svb.score import read_predictions
+    rows = [{**R(1, True), "method": m} for m in ("naive-llm", "naive-x5", "ast10")]
+    (tmp_path / "predictions.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    assert [r["method"] for r in read_predictions(tmp_path)] == ["generic-1q", "generic-5q", "ast10"]

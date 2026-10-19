@@ -1,6 +1,6 @@
 """Held-out evaluation: python -m svb.heldout --train runs/A --val runs/B --test runs/C"""
 import argparse, json, pathlib
-from svb.score import auc, auc_diff_ci, bootstrap_ci, fit_logreg, metrics_at, predict_logreg, youden_threshold
+from svb.score import read_predictions, auc, auc_diff_ci, bootstrap_ci, fit_logreg, metrics_at, predict_logreg, youden_threshold
 
 CHECK_IDS = ["AST01", "AST02", "AST03", "AST04", "AST05"]
 
@@ -10,7 +10,7 @@ def load_run(d, part, method="ast10-split"):
     got = cfg.get("part", "test")  # ponytail: runs from before --part existed were all test
     if got != part:
         raise ValueError(f"{d} is a {got} run, expected {part}")
-    rows = [r for r in map(json.loads, (d / "predictions.jsonl").read_text().splitlines()) if r["method"] == method]
+    rows = [r for r in read_predictions(d) if r["method"] == method]
     if not rows:
         raise ValueError(f"{d} has no {method} predictions")
     ids = [r["benchmark_id"] for r in rows]
@@ -82,7 +82,7 @@ def _at(rs, t, n_boot, seed):
 def evaluate(train, val, test, n_boot=2000, seed=0, base_val=None, base_test=None):
     """Combiners fitted on train, thresholds from val, scored once on test.
 
-    With `base_val`/`base_test` (rows of a baseline method such as naive-llm, scored on the same validation and
+    With `base_val`/`base_test` (rows of a baseline method such as generic-1q, scored on the same validation and
     test skills), the baseline gets the same thresholds and each combiner a paired AUC difference against it."""
     fit = [r for r in train if _full(r)]
     if not fit:
@@ -127,7 +127,7 @@ def main(argv=None):
     p.add_argument("--test", required=True)
     p.add_argument("--method", default="ast10-split")
     p.add_argument("--n-boot", type=int, default=2000)
-    p.add_argument("--baseline", help="a method in the same validation and test runs to compare against, e.g. naive-llm")
+    p.add_argument("--baseline", help="a method in the same validation and test runs to compare against, e.g. generic-1q")
     p.add_argument("--json", help="also write weights, thresholds and results here, for scripts")
     a = p.parse_args(argv)
     (ct, tr), (cv, va), (cx, te) = (load_run(a.train, "train", a.method), load_run(a.val, "validation", a.method),

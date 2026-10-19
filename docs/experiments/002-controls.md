@@ -1,14 +1,16 @@
 # 002 — Is it the AST10 content, the max of five scores, or batching?
 
-Date: 2026-10-03. Runs: `runs/20261003-115058` (001: `ast10`, `naive-llm`, `regex`) and `runs/20261003-161714` (this experiment: `naive-x5`, `ast10-split`). Same 200 skills, same seed, same model digest as 001 (154 malicious, 46 benign). Reproduce the tables with `python -m svb.compare <both run dirs>`.
+Date: 2026-10-03. Runs: `runs/20261003-115058` (001: `ast10`, `generic-1q`, `regex`) and `runs/20261003-161714` (this experiment: `generic-5q`, `ast10-split`). Same 200 skills, same seed, same model digest as 001 (154 malicious, 46 benign). Reproduce the tables with `python -m svb.compare <both run dirs>`.
+
+Method names: `generic-1q` and `generic-5q` were called `naive-llm` and `naive-x5` when this ran; the run files keep the old names, and the scorers read them under the new ones.
 
 ## Question
 
-In 001, `ast10` reached AUC 0.80 against 0.63 for `naive-llm`, but it differs in three ways: it asks AST10-specific questions, it takes the maximum of five scores, and it sends the five questions in one batched call. Which of these produces the gap?
+In 001, `ast10` reached AUC 0.80 against 0.63 for `generic-1q`, but it differs in three ways: it asks AST10-specific questions, it takes the maximum of five scores, and it sends the five questions in one batched call. Which of these produces the gap?
 
 ## Controls
 
-- **`naive-x5`:** five differently worded generic questions ("is this malicious?", "would installing it put the user at risk?", ...), batched in one call, scored as the max. Same max-of-five and batching as `ast10`, no AST10 content. (Five identical copies would be useless: repeated identical calls return identical scores to every digit, checked first.)
+- **`generic-5q`:** five differently worded generic questions ("is this malicious?", "would installing it put the user at risk?", ...), batched in one call, scored as the max. Same max-of-five and batching as `ast10`, no AST10 content. (Five identical copies would be useless: repeated identical calls return identical scores to every digit, checked first.)
 - **`ast10-split`:** the same five AST10 questions, one call each. Same content and max as `ast10`, no batching.
 
 ## Results
@@ -19,16 +21,16 @@ AUC of the max score, with paired-bootstrap 95% intervals on differences (2,000 
 |---|---|---|---|---|
 | ast10 | 0.796 | 0.155 | 0.62 | 0.15 |
 | ast10-split | 0.795 | 0.117 | 0.80 | 0.35 |
-| naive-x5 | 0.677 | 0.123 | 0.53 | 0.17 |
-| naive-llm | 0.631 | 0.079 | 0.29 | 0.02 |
+| generic-5q | 0.677 | 0.123 | 0.53 | 0.17 |
+| generic-1q | 0.631 | 0.079 | 0.29 | 0.02 |
 
 | paired difference | AUC diff, 95% CI |
 |---|---|
-| ast10 - naive-llm | +0.165 [+0.074, +0.256] |
-| ast10 - naive-x5 | +0.120 [+0.046, +0.197] |
-| naive-x5 - naive-llm | +0.045 [-0.016, +0.106] |
+| ast10 - generic-1q | +0.165 [+0.074, +0.256] |
+| ast10 - generic-5q | +0.120 [+0.046, +0.197] |
+| generic-5q - generic-1q | +0.045 [-0.016, +0.106] |
 | ast10-split - ast10 | -0.001 [-0.042, +0.039] |
-| ast10-split - naive-x5 | +0.119 [+0.045, +0.190] |
+| ast10-split - generic-5q | +0.119 [+0.045, +0.190] |
 
 Per check, AUC when batched (001) and when asked alone:
 
@@ -57,7 +59,7 @@ At threshold 0.1, `ast10` has F1 0.87, but flagging every skill gives precision 
 ## Limitations
 
 - Same 200 skills as 001, with only 46 benign. The intervals are wide; differences under about 0.05 are not resolved.
-- `naive-x5` uses one set of five paraphrases written by me. Another set might score differently, so conclusion 2 is one draw.
+- `generic-5q` uses one set of five paraphrases written by me. Another set might score differently, so conclusion 2 is one draw.
 - Per-check comparisons (conclusion 4) are exploratory.
 - Text of `SKILL.md` only; no bundled scripts.
 - No train or validation runs yet, so no honestly chosen threshold and no learned combination.

@@ -54,12 +54,12 @@ def test_default_methods_exclude_controls(tmp_path, monkeypatch):
     monkeypatch.setattr(runmod, "model_digest", lambda: "d")
     stub = lambda t: {"flag": False, "evidence": "", "scores": {}}
     monkeypatch.setattr(runmod, "METHODS", {m: stub for m in
-        ["ast10", "naive-llm", "regex", "ast10-split", "naive-x5"]})
+        ["ast10", "generic-1q", "regex", "ast10-split", "generic-5q"]})
     df = pd.DataFrame({"benchmark_id": ["a"], "label": [1], "source_id": ["s"],
                        "text": ["t"], "attack_categories": [[]]})
     out = runmod.run(n=1, out_root=str(tmp_path), df=df)
     assert {json.loads(l)["method"] for l in (out / "predictions.jsonl").read_text().splitlines()} == \
-        {"ast10", "naive-llm", "regex"}
+        {"ast10", "generic-1q", "regex"}
 
 def test_part_is_passed_to_loader(tmp_path, monkeypatch):
     monkeypatch.setattr(runmod, "model_digest", lambda: "d")
@@ -140,3 +140,8 @@ def test_out_names_the_run_dir_and_refuses_an_existing_one(tmp_path, monkeypatch
     assert out == tmp_path / "exp" / "sd-train" and "ids_file" not in json.loads((out / "config.json").read_text())
     with pytest.raises(FileExistsError):
         runmod.run(n=4, methods=["regex"], df=_df4(), out=str(out))
+
+def test_resume_counts_legacy_method_names_as_done(tmp_path):
+    pred = tmp_path / "predictions.jsonl"
+    pred.write_text(json.dumps({"benchmark_id": "a", "method": "naive-llm", "flag": False}) + "\n")
+    assert runmod._read_done(pred) == {("a", "generic-1q")}

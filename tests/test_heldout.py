@@ -140,26 +140,26 @@ def test_threshold_at_fpr_is_the_lowest_cut_within_budget():
     assert heldout.threshold_at_fpr(rows, 0.25) == 0.6 and heldout.threshold_at_fpr(rows, 0.5) == 0.5
     assert heldout.threshold_at_fpr(_rs([(0, 0.9), (1, 0.9)]), 0.0) > 0.9  # nothing qualifies: flag nothing
 
-def naive(prefix, n=20, good=True):
-    return [row(f"{prefix}{i}", i % 2, method="naive-llm", **{c: None for c in heldout.CHECK_IDS},
+def generic(prefix, n=20, good=True):
+    return [row(f"{prefix}{i}", i % 2, method="generic-1q", **{c: None for c in heldout.CHECK_IDS},
                 malicious=(0.6 if i % 2 else 0.4) if good else 0.5) for i in range(n)]
 
 def test_evaluate_with_baseline_reports_rules_and_paired_difference():
     res, _ = heldout.evaluate(signal_in_ast04("t"), signal_in_ast04("v"), signal_in_ast04("x"), n_boot=50,
-                              base_val=naive("v"), base_test=naive("x", good=False))
+                              base_val=generic("v"), base_test=generic("x", good=False))
     assert res["baseline"]["auc"] == 0.5 and res["AST04"]["vs_baseline"]["diff"] == 0.5
     assert set(res["AST04"]["rules"]) == {"tpr95", "fpr05"} and res["AST04"]["rules"]["tpr95"]["tpr"] == 1.0
 
 def test_main_with_baseline_writes_json(tmp_path, capsys):
     tr = make_run(tmp_path / "tr", "train", signal_in_ast04("t"))
-    va = make_run(tmp_path / "va", "validation", signal_in_ast04("v") + naive("v"))
-    te = make_run(tmp_path / "te", "test", signal_in_ast04("x") + naive("x"))
+    va = make_run(tmp_path / "va", "validation", signal_in_ast04("v") + generic("v"))
+    te = make_run(tmp_path / "te", "test", signal_in_ast04("x") + generic("x"))
     j = tmp_path / "out.json"
     heldout.main(["--train", str(tr), "--val", str(va), "--test", str(te), "--n-boot", "50",
-                  "--baseline", "naive-llm", "--json", str(j)])
+                  "--baseline", "generic-1q", "--json", str(j)])
     out = capsys.readouterr().out
-    assert "| logreg - naive-llm | " in out and "| AST04 | fpr05 | " in out
+    assert "| logreg - generic-1q | " in out and "| AST04 | fpr05 | " in out
     d = json.loads(j.read_text())
-    assert d["baseline"] == "naive-llm" and len(d["weights"]) == 6
+    assert d["baseline"] == "generic-1q" and len(d["weights"]) == 6
     assert {"max", "AST04", "logreg", "baseline"} <= set(d["results"]) and "rows" not in d["results"]["logreg"]
     assert d["results"]["logreg"]["rules"]["fpr05"]["threshold"] is not None

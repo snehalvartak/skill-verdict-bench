@@ -2,6 +2,7 @@ import argparse, json, os, pathlib, time
 from svb.checks import MAX_CHARS, THRESHOLD, prompt_hashes
 from svb.data import load, sample
 from svb.methods import METHODS
+from svb.score import current_name
 from svb.systemone import model_digest
 
 def _read_done(pred):
@@ -15,14 +16,14 @@ def _read_done(pred):
         if r["flag"] is None:
             continue  # unparseable rows are retried, not kept
         good.append(line)
-        done.add((r["benchmark_id"], r["method"]))
+        done.add((r["benchmark_id"], current_name(r["method"])))
     tmp = pred.with_name(pred.name + ".tmp")
     tmp.write_text("".join(l + "\n" for l in good))
     os.replace(tmp, pred)  # atomic: a kill mid-rewrite never loses the original
     return done
 
 MAX_FAILED_IN_A_ROW = 10  # ponytail: a dead model fails every call; a few flaky ones never reach 10 in a row
-DEFAULT_METHODS = ["ast10", "naive-llm", "regex"]  # controls (ast10-split, naive-x5) are opt-in via --methods
+DEFAULT_METHODS = ["ast10", "generic-1q", "regex"]  # controls (ast10-split, generic-5q) are opt-in via --methods
 
 def _check_resume(saved, cfg):
     """Refuse to append to a run made with a different sample, prompts, model or settings."""

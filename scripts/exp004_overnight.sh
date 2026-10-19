@@ -15,7 +15,7 @@ cd "$(dirname "$0")/.." || exit 1
 SS=${SKILLSCREEN:-../SkillScreen}
 OUT=runs/exp004
 DIGEST=0a2a05d6a581        # experiment 003's clef-flash; every 004 run must use the same one
-METHODS=(ast10-split naive-llm)
+METHODS=(ast10-split generic-1q)
 W003=-0.32,0.84,1.28,3.73,6.49,1.37   # 003's logistic regression, frozen, for the probe only
 PREREG=docs/experiments/004-skillscreen-cohorts.md
 mkdir -p "$OUT"
@@ -87,14 +87,14 @@ analyse() {  # analyse PROTOCOL ; held-out tables, then SkillScreen comparisons 
   local p=$1 j=$OUT/$1-heldout.json gate
   gate=$([ "$p" = sd ] && echo direct-s42 || echo direct)   # SkillScreen seed 42
   py -m svb.heldout --train "$OUT/$p-train" --val "$OUT/$p-validation" --test "$OUT/$p-test" \
-    --baseline naive-llm --json "$j" > "$OUT/$p-heldout.txt" 2>&1 || { log "$p: heldout failed; see $OUT/$p-heldout.txt"; return; }
-  py -m svb.skillscreen export "$OUT/$p-test" --method naive-llm --out "$OUT/$p-naive.csv"
+    --baseline generic-1q --json "$j" > "$OUT/$p-heldout.txt" 2>&1 || { log "$p: heldout failed; see $OUT/$p-heldout.txt"; return; }
+  py -m svb.skillscreen export "$OUT/$p-test" --method generic-1q --out "$OUT/$p-generic.csv"
   local w; w=$(field "$j" "','.join(str(x) for x in d['weights'])")
   for c in logreg AST04 max; do
     local t; t=$(field "$j" "d['results']['$c']['rules']['fpr05']['threshold']")
     py -m svb.skillscreen compare "$OUT/$p-test" --method ast10-split --combine "$c" --weights="$w" \
       --skillscreen "$SS" --protocol "$p" --threshold "$t" \
-      --paired "$OUT/$p-naive.csv" typesafe judge-gpt-5.5 "$gate" > "$OUT/$p-compare-$c.txt" 2>&1 \
+      --paired "$OUT/$p-generic.csv" typesafe judge-gpt-5.5 "$gate" > "$OUT/$p-compare-$c.txt" 2>&1 \
       || log "$p: compare $c failed; see $OUT/$p-compare-$c.txt"
   done
   log "$p: analysis written"
@@ -121,8 +121,8 @@ for c in max AST04; do
 done
 py -m svb.skillscreen compare "$OUT/probe" --method ast10-split --combine logreg --weights="$W003" --skillscreen "$SS" \
   --protocol sd --threshold 0.5 > "$OUT/probe-logreg003.txt" 2>&1 || log "probe compare logreg failed"
-py -m svb.skillscreen compare "$OUT/probe" --method naive-llm --skillscreen "$SS" --protocol sd \
-  --threshold 0.1 > "$OUT/probe-naive.txt" 2>&1 || log "probe compare naive failed"
+py -m svb.skillscreen compare "$OUT/probe" --method generic-1q --skillscreen "$SS" --protocol sd \
+  --threshold 0.1 > "$OUT/probe-generic.txt" 2>&1 || log "probe compare generic failed"
 summary
 
 # 004b: source-disjoint first (it answers the main question), then structurally disjoint

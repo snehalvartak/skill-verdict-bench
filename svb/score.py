@@ -2,6 +2,16 @@ import json, math, pathlib, sys
 from collections import defaultdict
 from svb.checks import THRESHOLD
 
+LEGACY_METHODS = {"naive-llm": "generic-1q", "naive-x5": "generic-5q"}  # names in runs made before 2026-10-19
+
+def current_name(m):
+    return LEGACY_METHODS.get(m, m)
+
+def read_predictions(run_dir):
+    """Rows of a run's predictions.jsonl, with old method names mapped to current ones."""
+    rows = [json.loads(l) for l in (pathlib.Path(run_dir) / "predictions.jsonl").read_text().splitlines()]
+    return [{**r, "method": current_name(r["method"])} for r in rows]
+
 def metrics(rows):
     ok = [r for r in rows if r["flag"] is not None]
     tp = sum(r["label"] == 1 and r["flag"] for r in ok)
@@ -106,7 +116,7 @@ def _fmt(x):
     return "n/a" if x is None else f"{x:.2f}"
 
 def report(run_dir):
-    rows = [json.loads(l) for l in (pathlib.Path(run_dir) / "predictions.jsonl").read_text().splitlines()]
+    rows = read_predictions(run_dir)
     out = ["| method | precision | recall | F1 | TP | FP | FN | TN | unparseable |", "|---|---|---|---|---|---|---|---|---|"]
     for m in sorted({r["method"] for r in rows}):
         s = metrics([r for r in rows if r["method"] == m])

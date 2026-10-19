@@ -15,7 +15,7 @@ def regex(skill_text):
     return {"flag": bool(hits), "evidence": ",".join(hits), "scores": {}}
 
 from svb.systemone import ask
-from svb.checks import CHECKS, NAIVE, NAIVE5, THRESHOLD, truncate
+from svb.checks import CHECKS, GENERIC, GENERIC5, THRESHOLD, truncate
 
 def _empty():
     return {"flag": None, "evidence": "empty", "scores": {}}
@@ -31,18 +31,18 @@ def ast10(skill_text):
     scores = ask(text, CHECKS)
     return {"flag": _decide(scores), "evidence": "truncated" if cut else "", "scores": scores}
 
-def naive_llm(skill_text):
+def generic_1q(skill_text):
     if not skill_text.strip():
         return _empty()
     text, cut = truncate(skill_text)
-    scores = ask(text, NAIVE)
+    scores = ask(text, GENERIC)
     return {"flag": _decide(scores), "evidence": "truncated" if cut else "", "scores": scores}
 
-def naive_x5(skill_text):
+def generic_5q(skill_text):
     if not skill_text.strip():
         return _empty()
     text, cut = truncate(skill_text)
-    scores = ask(text, NAIVE5)
+    scores = ask(text, GENERIC5)
     return {"flag": _decide(scores), "evidence": "truncated" if cut else "", "scores": scores}
 
 def ast10_split(skill_text):
@@ -54,5 +54,5 @@ def ast10_split(skill_text):
         scores.update(ask(text, {cid: q}))
     return {"flag": _decide(scores), "evidence": "truncated" if cut else "", "scores": scores}
 
-METHODS = {"ast10": ast10, "naive-llm": naive_llm, "regex": regex,
-           "ast10-split": ast10_split, "naive-x5": naive_x5}
+METHODS = {"ast10": ast10, "generic-1q": generic_1q, "regex": regex,
+           "ast10-split": ast10_split, "generic-5q": generic_5q}

@@ -13,7 +13,7 @@ Its predictions are CC BY 4.0 (c) SkillScreen contributors; they are read in pla
 """
 import argparse, csv, json, math, pathlib, random, sys
 from collections import defaultdict
-from svb.score import _max, predict_logreg
+from svb.score import _max, predict_logreg, read_predictions
 
 CHECK_IDS = ["AST01", "AST02", "AST03", "AST04", "AST05"]
 
@@ -71,8 +71,7 @@ def combiner(combine="max", weights=None):
 def run_scores(run_dir, method, combine=_max):
     """{benchmark_id: (label, score)} for one method; LLM rows go through `combine`, regex scores by its flag."""
     out = {}
-    for line in (pathlib.Path(run_dir) / "predictions.jsonl").read_text().splitlines():
-        r = json.loads(line)
+    for r in read_predictions(run_dir):
         if r["method"] == method:
             s = combine(r) if r["scores"] else (None if r["flag"] is None else float(r["flag"]))
             out[r["benchmark_id"]] = (r["label"], s)

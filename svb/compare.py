@@ -1,12 +1,12 @@
 """Compare methods across run dirs: python -m svb.compare runs/A runs/B ..."""
 import json, sys
-from svb.score import auc, auc_by_check, auc_diff_ci, metrics_at, youden_threshold
+from svb.score import read_predictions, auc, auc_by_check, auc_diff_ci, metrics_at, youden_threshold
 
-PAIRS = [("ast10", "naive-llm"), ("ast10", "naive-x5"), ("naive-x5", "naive-llm"),
-         ("ast10-split", "ast10"), ("ast10-split", "naive-x5")]
+PAIRS = [("ast10", "generic-1q"), ("ast10", "generic-5q"), ("generic-5q", "generic-1q"),
+         ("ast10-split", "ast10"), ("ast10-split", "generic-5q")]
 
 def load(dirs):
-    rows = [json.loads(l) for d in dirs for l in open(f"{d}/predictions.jsonl")]
+    rows = [r for d in dirs for r in read_predictions(d)]
     by = {}
     for r in rows:
         by.setdefault(r["method"], []).append(r)
@@ -14,7 +14,7 @@ def load(dirs):
 
 def main(dirs):
     by = load(dirs)
-    llm = [m for m in ("ast10", "ast10-split", "naive-llm", "naive-x5") if m in by]
+    llm = [m for m in ("ast10", "ast10-split", "generic-1q", "generic-5q") if m in by]
     print("| method | AUC | Youden t | TPR | FPR |\n|---|---|---|---|---|")
     for m in llm:
         if len({r["label"] for r in by[m]}) < 2:
@@ -30,9 +30,9 @@ def main(dirs):
         a, b = auc_by_check(by["ast10"]), auc_by_check(by["ast10-split"])
         for c in sorted(a):
             print(f"| {c} | {a[c]:.3f} | {b[c]:.3f} |")
-    if "naive-x5" in by:
+    if "generic-5q" in by:
         print("\n| paraphrase | AUC |\n|---|---|")
-        for k, v in sorted(auc_by_check(by["naive-x5"]).items()):
+        for k, v in sorted(auc_by_check(by["generic-5q"]).items()):
             print(f"| {k} | {v:.3f} |")
 
 if __name__ == "__main__":

@@ -53,14 +53,14 @@ uv run python -m svb.skillscreen export runs/<run_id> --method ast10 --out ast10
 uv run python -m svb.skillscreen compare runs/<run_id> --method ast10-split --combine logreg --weights=<from svb.heldout> --skillscreen ../SkillScreen --protocol sd --threshold <t> --paired typesafe
 ```
 
-Hosted decision models run through OpenRouter with the same methods. The key is read from `OPENROUTER_API_KEY`; the served model version and per-call cost are recorded in each run. Hosted runs are separate from local ones and are never pooled with them. Models, estimated costs and the order of work are in `docs/superpowers/plans/2026-10-19-hosted-models.md`.
+Hosted decision models run through OpenRouter with the same methods. The key is read from `OPENROUTER_API_KEY`; the served model version and per-call cost are recorded in each run. Hosted runs are separate from local ones and are never pooled with them. `--provider <slug>` sends every call to one OpenRouter provider, with no fallback to others, and records it in the run. Models, estimated costs and the order of work are in `docs/superpowers/plans/2026-10-19-hosted-models.md`.
 
 ```bash
 OPENROUTER_API_KEY=... uv run python -m svb.run --backend openrouter --model cloudflare/clef-flash \
-  --methods ast10 generic-1q --workers 8 --max-cost 1 --n 200 --seed 0
+  --provider cloudflare --methods ast10 generic-1q --workers 8 --max-cost 1 --n 200 --seed 0
 ```
 
-Experiment 004 runs unattended on hosted `cloudflare/clef-flash` (pre-registration amendment 1): export `OPENROUTER_API_KEY`, then `bash scripts/exp004_overnight.sh` (start it with `nohup`; see `docs/superpowers/plans/2026-10-19-overnight-brief.md`). It resumes where it stopped and writes `runs/exp004/summary.md`.
+Experiment 004 runs unattended on hosted `cloudflare/clef-flash`, served by Cloudflare only (pre-registration amendments 1 and 2): export `OPENROUTER_API_KEY`, then `bash scripts/exp004_overnight.sh` (start it with `nohup`; see `docs/superpowers/plans/2026-10-19-overnight-brief.md`). It resumes where it stopped and writes `runs/exp004/summary.md`.
 
 Runs created before `--part` existed (including experiment 001) have no `part` in their `config.json`, so `--resume` refuses them. They can still be scored; to continue one, start a fresh run.
 

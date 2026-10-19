@@ -9,21 +9,24 @@ URL = "http://localhost:11434/v1/systemone"
 TAGS = "http://localhost:11434/api/tags"
 OPENROUTER_URL = os.environ.get("SVB_OPENROUTER_URL", "https://openrouter.ai/api/alpha/decisions")  # override only for tests
 RETRY_CODES = {408, 429, 500, 502, 503, 504}
-BACKEND = {"name": "ollama", "model": "clef-flash", "state_format": "string"}
+BACKEND = {"name": "ollama", "model": "clef-flash", "state_format": "string", "provider": None}
 _tl = threading.local()  # per-thread usage, so concurrent workers each see only their own calls
 
-def configure(backend="ollama", model=None, state_format="string"):
-    """Choose where ask() sends questions. OpenRouter reads its key from OPENROUTER_API_KEY, never from args."""
+def configure(backend="ollama", model=None, state_format="string", provider=None):
+    """Choose where ask() sends questions. OpenRouter reads its key from OPENROUTER_API_KEY, never from args.
+    `provider`: OpenRouter provider slug (e.g. cloudflare) that serves every call, with no fallback to others."""
     if backend not in ("ollama", "openrouter"):
         raise ValueError(f"unknown backend {backend!r}: use ollama or openrouter")
     if state_format not in ("string", "object"):
         raise ValueError("state_format must be string or object")
+    if provider and backend != "openrouter":
+        raise ValueError("--provider only applies to --backend openrouter")
     if backend == "openrouter":
         if not model:
             raise ValueError("--backend openrouter needs --model, e.g. cloudflare/clef-flash")
         if not os.environ.get("OPENROUTER_API_KEY"):
             raise ValueError("set the OPENROUTER_API_KEY environment variable to use --backend openrouter")
-    BACKEND.update(name=backend, model=model or "clef-flash", state_format=state_format)
+    BACKEND.update(name=backend, model=model or "clef-flash", state_format=state_format, provider=provider or None)
     _tl.usage = None
 
 def _extract(raw, ids):
@@ -58,13 +61,22 @@ def take_usage():
     u, _tl.usage = getattr(_tl, "usage", None), None
     return u
 
+def _slug(name):
+    return "".join(c for c in str(name).lower() if c.isalnum())
+
 def _post_openrouter(body, attempts=5):
+    pin = BACKEND["provider"]
+    if pin:  # every call on one provider: providers differ in context handling (one truncates silently)
+        body = {**body, "provider": {"only": [pin], "allow_fallbacks": False}}
     req = urllib.request.Request(OPENROUTER_URL, json.dumps(body).encode(), {
         "Content-Type": "application/json", "Authorization": "Bearer " + os.environ["OPENROUTER_API_KEY"]})
     for attempt in range(attempts):
         try:
             with urllib.request.urlopen(req, timeout=120) as r:
-                return json.load(r)
+                raw = json.load(r)
+            if pin and isinstance(raw, dict) and _slug(raw.get("provider")) != _slug(pin):
+                raise RuntimeError(f"OpenRouter served {raw.get('provider')!r}, not the pinned provider {pin!r}")
+            return raw
         except urllib.error.HTTPError as e:
             if e.code not in RETRY_CODES or attempt == attempts - 1:
                 detail = e.read()[:300].decode("utf-8", "replace")  # the response body, never the request headers

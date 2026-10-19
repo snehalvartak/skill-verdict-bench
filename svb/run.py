@@ -30,7 +30,8 @@ DEFAULT_METHODS = ["ast10", "generic-1q", "regex"]  # controls (ast10-split, gen
 def _check_resume(saved, cfg):
     """Refuse to append to a run made with a different sample, prompts, model or settings."""
     # ponytail: methods may differ; a resume can add or skip methods without mixing runs
-    bad = [k for k in cfg if k != "methods" and saved.get(k) != cfg[k]]
+    keys = list(cfg) + [k for k in ("provider",) if k in saved and k not in cfg]  # a pinned run stays pinned
+    bad = [k for k in keys if k != "methods" and saved.get(k) != cfg.get(k)]
     if bad:
         raise ValueError(f"resume config differs from the saved run in: {', '.join(bad)}")
 
@@ -51,12 +52,13 @@ def _score(m, text):
     return v, systemone.take_usage()
 
 def run(n=200, split="random", part="test", seed=0, methods=None, out_root="runs", df=None, resume=None, exclude=(),
-        ids=None, out=None, backend="ollama", model=None, state_format="string", workers=1, max_cost=None):
+        ids=None, out=None, backend="ollama", model=None, state_format="string", provider=None, workers=1, max_cost=None):
     """`ids`: file of benchmark ids to restrict the part to (every id must be in it). `out`: run dir to create.
     `backend`/`model`: ollama (local clef-flash) or openrouter with a hosted decision model id.
+    `provider`: OpenRouter provider every hosted call must go to (no fallbacks); recorded, so resume cannot mix providers.
     `workers`: concurrent skills (useful for hosted models). `max_cost`: stop once logged hosted spend reaches it."""
     methods = methods or DEFAULT_METHODS
-    systemone.configure(backend, model, state_format)
+    systemone.configure(backend, model, state_format, provider)
     df = load(split, part) if df is None else df
     if ids:
         want = _read_ids(ids)
@@ -73,6 +75,8 @@ def run(n=200, split="random", part="test", seed=0, methods=None, out_root="runs
         cfg["ids_file"] = pathlib.Path(ids).name  # only when used, so older configs still pass the resume check
     if backend != "ollama":  # local runs keep their old config keys, so they still resume
         cfg.update(model=model, backend=backend, state_format=state_format)
+    if provider:  # only when pinned, so unpinned hosted runs still resume
+        cfg["provider"] = provider
     if resume:
         out = pathlib.Path(resume)
         _check_resume(json.loads((out / "config.json").read_text()), cfg)
@@ -133,8 +137,9 @@ if __name__ == "__main__":
     p.add_argument("--model", help="hosted decision model id for --backend openrouter, e.g. cloudflare/clef-flash")
     p.add_argument("--state-format", default="string", choices=["string", "object"],
                    help="send the skill as the state string, or as {\"skill_md\": ...} if the backend needs an object")
+    p.add_argument("--provider", help="OpenRouter provider slug that serves every call, no fallbacks (e.g. cloudflare)")
     p.add_argument("--workers", type=int, default=1, help="skills scored at once (keep 1 for local Ollama)")
     p.add_argument("--max-cost", type=float, help="stop when logged hosted spend in this run reaches this many dollars")
     a = p.parse_args()
     print(run(a.n, a.split, a.part, a.seed, a.methods, resume=a.resume, exclude=a.exclude, ids=a.ids, out=a.out,
-              backend=a.backend, model=a.model, state_format=a.state_format, workers=a.workers, max_cost=a.max_cost))
+              backend=a.backend, model=a.model, state_format=a.state_format, provider=a.provider, workers=a.workers, max_cost=a.max_cost))

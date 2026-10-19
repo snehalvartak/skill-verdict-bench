@@ -1,4 +1,4 @@
-"""Helper for exp004_overnight.sh. Reads MODEL (and SF) from the environment; the API key stays in the environment.
+"""Helper for exp004_overnight.sh. Reads MODEL, PROVIDER (and SF) from the environment; the API key stays in the environment.
 
 Default: find which state form the hosted model accepts and print "<form> <served model digest>".
 CONTEXT_CHECK=1: send the longest test skill of each disjoint split and print how many tokens the model read.
@@ -7,11 +7,12 @@ import os, sys
 from svb import systemone
 
 MODEL = os.environ["MODEL"]
+PROVIDER = os.environ.get("PROVIDER") or None
 
 def probe():
     last = None
     for form in ("string", "object"):
-        systemone.configure("openrouter", MODEL, form)
+        systemone.configure("openrouter", MODEL, form, PROVIDER)
         try:
             print(form, systemone.model_digest())
             return
@@ -24,7 +25,7 @@ def context_check():
     from svb.checks import truncate
     from svb.data import load
     form = os.environ["SF"]
-    systemone.configure("openrouter", MODEL, form)
+    systemone.configure("openrouter", MODEL, form, PROVIDER)
     q = {"q": ("Is this text long?", {"true": "yes", "false": "no"})}
     for split in ("source_disjoint", "m_structural_disjoint"):
         df = load(split, "test")

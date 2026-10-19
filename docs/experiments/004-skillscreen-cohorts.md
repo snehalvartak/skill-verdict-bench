@@ -71,6 +71,15 @@ Both are fixed for the whole experiment. If the served version changes between r
 - **Context window.** The hosted context is reported as 24,576 tokens, against our cap of 60,000 characters (about 15,000 tokens). The runner records what the model reads for the longest test skill.
 - **Budget.** At about $0.038 per million input tokens, the planned runs should cost about $2 to $5. The runner logs the cost OpenRouter reports for every call, and stops at $5 per run step or $15 in total.
 
+## Amendment 2 (2026-10-19, before any 004 run was scored)
+
+**What changed: one provider for the whole experiment.** OpenRouter serves `cloudflare/clef-flash` through three providers (Cloudflare, DeepInfra, PrimeIntellect) and routed calls between them. They handle long skills differently. Cloudflare and DeepInfra refuse a skill over 24,576 tokens, while PrimeIntellect cut the longest m_structural_disjoint test skill (31,548 tokens) to 16,384 tokens without an error. So every 004 call goes to **Cloudflare**, with fallback to other providers turned off:
+- the runner sends `provider: {"only": ["cloudflare"], "allow_fallbacks": false}` on every call;
+- a reply from any other provider counts as unscored, never as a score;
+- the provider is saved in each run's `config.json`, and `--resume` refuses a different one.
+
+**Consequence, stated in advance:** a skill over 24,576 tokens is refused and left unscored, and the unscored count is reported as for any failed call. Skills are not cut further to fit. Length counts before the run: 5 of the 1,947 m_structural_disjoint test skills are over 46,000 characters, and none of the 1,384 source_disjoint test skills are.
+
 ## Results
 
 To be filled from `runs/exp004/summary.md`. The pre-registered comparisons come first; exploratory results are labelled as such.

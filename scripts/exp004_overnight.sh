@@ -20,6 +20,7 @@ cd "$(dirname "$0")/.." || exit 1
 SS=${SKILLSCREEN:-../SkillScreen}
 OUT=runs/exp004
 MODEL=${MODEL:-cloudflare/clef-flash}
+PROVIDER=${PROVIDER:-cloudflare}  # every call on this OpenRouter provider, no fallbacks (amendment 2)
 WORKERS=${WORKERS:-8}         # skills scored at once
 STEP_CAP=${STEP_CAP:-5}       # dollars per run step (expected well under $1 each)
 TOTAL_CAP=${TOTAL_CAP:-15}    # dollars for the whole experiment (expected about $2 to $5)
@@ -42,7 +43,7 @@ git ls-files --error-unmatch "$PREREG" > /dev/null 2>&1 || die "$PREREG is not c
 
 # Which state form the hosted model accepts, and which version it serves, from tiny probe calls. On a re-run the
 # served version must match the first run's, or the runs would mix model versions.
-probe=$(PYTHONPATH=. MODEL="$MODEL" py scripts/exp004_probe_backend.py 2> "$OUT/backend-probe.err") \
+probe=$(PYTHONPATH=. MODEL="$MODEL" PROVIDER="$PROVIDER" py scripts/exp004_probe_backend.py 2> "$OUT/backend-probe.err") \
   || die "OpenRouter refused the probe call for $MODEL; see $OUT/backend-probe.err"
 SF=${probe%% *}; got=${probe#* }
 if [ -f "$OUT/backend.txt" ]; then
@@ -51,7 +52,7 @@ if [ -f "$OUT/backend.txt" ]; then
     || die "OpenRouter now serves $got ($SF), but the first run used $first_got ($first_sf). Decide with a person first"
 else
   echo "$SF $got" > "$OUT/backend.txt"
-  log "backend: OpenRouter $MODEL, served as $got, state sent as a $SF"
+  log "backend: OpenRouter $MODEL on provider $PROVIDER, served as $got, state sent as a $SF"
   [[ $got == *unpinned ]] && log "note: OpenRouter returned no dated version for $MODEL; a silent model change would not be detected"
 fi
 
@@ -66,9 +67,9 @@ if [ ! -f "$OUT/data-verify-before.txt" ]; then
 fi
 
 if [ ! -f "$OUT/context-check.txt" ]; then
-  # The hosted context is reported as 24,576 tokens; skills are sent up to 60,000 characters.
-  # Record what the model reads for the longest test skill; a person decides what to do about it.
-  PYTHONPATH=. MODEL="$MODEL" SF="$SF" CONTEXT_CHECK=1 py scripts/exp004_probe_backend.py > "$OUT/context-check.txt" 2>&1 \
+  # The hosted context is 24,576 tokens; skills are sent up to 60,000 characters. On the pinned provider a longer
+  # skill is refused and left unscored (amendment 2). Record what the model reads for the longest test skill.
+  PYTHONPATH=. MODEL="$MODEL" PROVIDER="$PROVIDER" SF="$SF" CONTEXT_CHECK=1 py scripts/exp004_probe_backend.py > "$OUT/context-check.txt" 2>&1 \
     || log "context check failed; see $OUT/context-check.txt"
   log "context check: $(tr '\n' ' ' < "$OUT/context-check.txt")"
 fi
@@ -82,7 +83,7 @@ run_step() {  # run_step NAME svb.run-args... ; resumes NAME's dir if it exists,
   total=$(spent)
   py -c "import sys; sys.exit(0 if $total < $TOTAL_CAP else 1)" || die "spent \$$total of the \$$TOTAL_CAP budget; a person decides whether to raise TOTAL_CAP"
   log "$name: running (spent so far \$$total)"
-  local hosted=(--backend openrouter --model "$MODEL" --state-format "$SF" --workers "$WORKERS" --max-cost "$STEP_CAP")
+  local hosted=(--backend openrouter --model "$MODEL" --state-format "$SF" --provider "$PROVIDER" --workers "$WORKERS" --max-cost "$STEP_CAP")
   for attempt in 1 2 3 4 5; do
     if [ -f "$dir/config.json" ]; then
       py -m svb.run "$@" --methods "${METHODS[@]}" "${hosted[@]}" --resume "$dir" >> "$OUT/progress.log" 2>&1 && break
@@ -118,7 +119,7 @@ analyse() {  # analyse PROTOCOL ; held-out tables, then SkillScreen comparisons 
 summary() {
   {
     echo "# Experiment 004 results, $(date '+%F %T')"; echo
-    echo "Model: OpenRouter $MODEL, served as $got, state sent as a $SF. Spent: \$$(spent). Commit: $(git rev-parse --short HEAD)."; echo
+    echo "Model: OpenRouter $MODEL on provider $PROVIDER, served as $got, state sent as a $SF. Spent: \$$(spent). Commit: $(git rev-parse --short HEAD)."; echo
     for f in "$OUT"/data-verify-*.txt "$OUT"/context-check.txt "$OUT"/probe-*.txt "$OUT"/sd-heldout.txt \
              "$OUT"/sd-compare-*.txt "$OUT"/msd-heldout.txt "$OUT"/msd-compare-*.txt; do
       [ -f "$f" ] && [ "${f##*/}" != probe-ids.txt ] && { echo "## ${f##*/}"; echo; echo '```'; cat "$f"; echo '```'; echo; }

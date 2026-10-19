@@ -30,7 +30,7 @@ If a change needs a file the other side owns, say so in the PR description and k
      uv run python -m svb.skillscreen compare runs/<id> --method ast10 --skillscreen ../SkillScreen --protocol sd --threshold 0.1
      ```
    - Report AUROC on the probe set and the score distributions only. `--threshold` is required, but its recall and FPR columns mean nothing here; choose no threshold from the probe. Say in the write-up that this looked at test data.
-4. **Experiment 004.** Fit on `m_structural_disjoint` and `source_disjoint` validation, then score SkillScreen's full test cohorts with `svb.skillscreen compare`. Batched `ast10` costs one call per skill; experiment 002 found batching does not change AUC. Use `ast10-split` only if 003 shows the learned combination helps.
+4. **Experiment 004.** Plan: `docs/superpowers/plans/2026-10-19-exp004-skillscreen-cohorts.md`. Experiment 003 found the learned combination and AST04 alone both beat the max, so 004 uses `ast10-split`, which gives every combiner from the same calls.
 
 ## Cloud agent
 

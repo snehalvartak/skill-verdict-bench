@@ -5,13 +5,17 @@ Its predictions are CC BY 4.0 (c) SkillScreen contributors; they are read in pla
 
   python -m svb.skillscreen export runs/<id> --method ast10 --out ast10.csv
   python -m svb.skillscreen compare runs/<id> --method ast10 --skillscreen ../SkillScreen --protocol sd --threshold <t>
+  python -m svb.skillscreen compare runs/<id> --method ast10-split --combine logreg --weights=-0.32,0.84,1.28,3.73,6.49,1.37 \
+      --skillscreen ../SkillScreen --protocol sd --threshold <t> --paired typesafe
 
 --threshold has no default: this model's scores sit far below 0.5, so choose the cut on validation.
   python -m svb.skillscreen probe --skillscreen ../SkillScreen --out probe-ids.txt
 """
 import argparse, csv, json, math, pathlib, random, sys
 from collections import defaultdict
-from svb.score import _max
+from svb.score import _max, predict_logreg
+
+CHECK_IDS = ["AST01", "AST02", "AST03", "AST04", "AST05"]
 
 PROTOCOL_SPLIT = {"msd": "m_structural_disjoint", "sd": "source_disjoint"}
 
@@ -47,13 +51,29 @@ def at_threshold(labels, values, t):
     pos = [f for f, y in zip(flag, labels) if y == 1]; neg = [f for f, y in zip(flag, labels) if y == 0]
     return {"recall": sum(pos) / len(pos) if pos else None, "fpr": sum(neg) / len(neg) if neg else None}
 
-def run_scores(run_dir, method):
-    """{benchmark_id: (label, score)} for one method; LLM methods score by the max check, regex by its flag."""
+def combiner(combine="max", weights=None):
+    """Score one prediction row: "max" of its checks, a single check id (e.g. "AST04"), or "logreg" with
+    weights [intercept, AST01..AST05] as printed by svb.heldout. Rows without the needed scores give None."""
+    if combine == "max":
+        return _max
+    if combine in CHECK_IDS:
+        return lambda r: r["scores"].get(combine)
+    if combine == "logreg":
+        if not weights or len(weights) != len(CHECK_IDS) + 1:
+            raise ValueError(f"logreg needs {len(CHECK_IDS) + 1} weights: intercept, then {', '.join(CHECK_IDS)}")
+        def lr(r):
+            x = [r["scores"].get(c) for c in CHECK_IDS]
+            return None if None in x else predict_logreg(weights, [x])[0]
+        return lr
+    raise ValueError(f"unknown combiner {combine!r}: use max, logreg or one of {', '.join(CHECK_IDS)}")
+
+def run_scores(run_dir, method, combine=_max):
+    """{benchmark_id: (label, score)} for one method; LLM rows go through `combine`, regex scores by its flag."""
     out = {}
     for line in (pathlib.Path(run_dir) / "predictions.jsonl").read_text().splitlines():
         r = json.loads(line)
         if r["method"] == method:
-            s = _max(r) if r["scores"] else (None if r["flag"] is None else float(r["flag"]))
+            s = combine(r) if r["scores"] else (None if r["flag"] is None else float(r["flag"]))
             out[r["benchmark_id"]] = (r["label"], s)
     if not out:
         raise ValueError(f"no {method} rows in {run_dir}")
@@ -127,6 +147,23 @@ def compare(scores, root, protocol, t, gate="direct-s42"):
     cascade = {"recall": sum(pos) / len(pos) if pos else None, "fpr": sum(neg) / len(neg) if neg else None}
     return {"n": len(ids), "cohort": len(cohort), "rows": rows, "by_source": by_src, "cascade": cascade}
 
+def paired_auroc_diff(scores, theirs, ids, n_boot=2000, seed=0):
+    """Our AUROC minus theirs on the same skills, with a 95% paired-bootstrap interval (resampled by skill).
+    Skills either side failed to score are dropped from both, so the two AUROCs always share a sample."""
+    ids = [i for i in ids if i in theirs and scores[i][1] is not None and theirs[i][1] is not None]
+    def diff(sample):
+        labels = [scores[i][0] for i in sample]
+        a, b = auroc(labels, [scores[i][1] for i in sample]), auroc(labels, [theirs[i][1] for i in sample])
+        return None if a is None or b is None else a - b
+    rng, boots = random.Random(seed), []
+    for _ in range(n_boot):
+        d = diff([rng.choice(ids) for _ in ids])
+        if d is not None:
+            boots.append(d)
+    boots.sort()
+    ci = (boots[int(0.025 * len(boots))], boots[int(0.975 * len(boots)) - 1]) if boots else (None, None)
+    return {"n": len(ids), "diff": diff(ids), "ci": ci}
+
 def probe_ids(root, n_harm=100, seed=0):
     """Source-disjoint test skills that decide the cascade story: a SkillHarm sample (zero-shot TypeSafe
     catches none of them) and every SkillFortifyBench benign skill (SkillScreen flags all of them)."""
@@ -151,26 +188,44 @@ def report(res, t, gate):
                 out.append(f"| {s} | {'malicious' if label else 'benign'} | {n} | {a} | {b} |")
     c = res["cascade"]
     out += ["", f"Cascade ({gate} flags, then ours must also flag): recall {_f(c['recall'])}, FPR {_f(c['fpr'])}"]
+    for name, pd in res.get("paired", {}).items():
+        lo, hi = pd["ci"]
+        out.append(f"Paired AUROC, ours - {name}: {_f(pd['diff'])} [{_f(lo)}, {_f(hi)}] on {pd['n']} skills")
     return "\n".join(out)
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
+    weights = lambda v: [float(x) for x in v.split(",")]
     e = sub.add_parser("export"); e.add_argument("run"); e.add_argument("--method", required=True); e.add_argument("--out", required=True)
+    e.add_argument("--combine", default="max"); e.add_argument("--weights", type=weights)
     c = sub.add_parser("compare"); c.add_argument("run"); c.add_argument("--method", required=True)
     c.add_argument("--skillscreen", required=True); c.add_argument("--protocol", choices=sorted(PROTOCOL_SPLIT), required=True)
     c.add_argument("--threshold", type=float, required=True, help="cut for our scores, chosen on validation")
     c.add_argument("--gate", default="direct-s42")
+    c.add_argument("--combine", default="max", help="max, logreg, or one check id such as AST04")
+    c.add_argument("--weights", type=weights, help="logreg weights: intercept,AST01,...,AST05 (from svb.heldout)")
+    c.add_argument("--paired", nargs="*", default=[],
+                   help="what to test our AUROC against: SkillScreen file names (typesafe) or CSVs written by export")
+    c.add_argument("--n-boot", type=int, default=2000)
     b = sub.add_parser("probe"); b.add_argument("--skillscreen", required=True); b.add_argument("--out", required=True)
     b.add_argument("--n-harm", type=int, default=100); b.add_argument("--seed", type=int, default=0)
     a = p.parse_args(argv)
     try:
         if a.cmd == "export":
-            export(run_scores(a.run, a.method), a.out)
+            export(run_scores(a.run, a.method, combiner(a.combine, a.weights)), a.out)
         elif a.cmd == "compare":
             check_run(a.run, a.protocol)
-            print(report(compare(run_scores(a.run, a.method), a.skillscreen, a.protocol, a.threshold, a.gate),
-                         a.threshold, a.gate))
+            scores = run_scores(a.run, a.method, combiner(a.combine, a.weights))
+            res = compare(scores, a.skillscreen, a.protocol, a.threshold, a.gate)
+            pred = pathlib.Path(a.skillscreen) / "data/predictions" / a.protocol / "test"
+            ids = sorted(set(scores) & set(read_scores(pathlib.Path(a.skillscreen) / "data/cohorts" / f"{a.protocol}-test.csv")))
+            for name in a.paired:
+                path = pathlib.Path(name) if name.endswith(".csv") else pred / f"{name}.csv"
+                if not path.exists():
+                    raise ValueError(f"no file {path}" if name.endswith(".csv") else f"no SkillScreen file {name}.csv in {pred}")
+                res.setdefault("paired", {})[name] = paired_auroc_diff(scores, read_scores(path), ids, a.n_boot)
+            print(report(res, a.threshold, a.gate))
         else:
             ids = probe_ids(a.skillscreen, a.n_harm, a.seed)
             pathlib.Path(a.out).write_text("".join(i + "\n" for i in ids))

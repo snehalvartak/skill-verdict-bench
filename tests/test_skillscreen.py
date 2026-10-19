@@ -127,3 +127,44 @@ def test_cli_export_and_probe_write_files(tmp_path, root, capsys):
     assert (tmp_path / "x.csv").read_text() == "benchmark_id,label,score\nh1,1,0.3\n"
     ss.main(["probe", "--skillscreen", str(root), "--out", str(tmp_path / "ids.txt"), "--n-harm", "1"])
     assert len((tmp_path / "ids.txt").read_text().split()) == 3 and "3 ids" in capsys.readouterr().out
+
+def test_combiner_max_single_check_and_logreg():
+    r = {"scores": {"AST01": 0.1, "AST02": 0.0, "AST03": 0.2, "AST04": 0.6, "AST05": 0.0}}
+    assert ss.combiner("max")(r) == 0.6 and ss.combiner("AST04")(r) == 0.6
+    assert ss.combiner("logreg", [0, 0, 0, 0, 0, 0])(r) == 0.5
+    assert ss.combiner("logreg", [0, 0, 0, 0, 0, 0])({"scores": {**r["scores"], "AST02": None}}) is None
+    with pytest.raises(ValueError, match="needs 6 weights"):
+        ss.combiner("logreg", [1.0])
+    with pytest.raises(ValueError, match="unknown combiner"):
+        ss.combiner("mean")
+
+def test_paired_auroc_diff_same_and_opposite_rankings():
+    ours = {"a": (1, 0.9), "b": (1, 0.8), "c": (0, 0.1), "d": (0, 0.2), "e": (1, None)}
+    same = ss.paired_auroc_diff(ours, {k: v for k, v in ours.items()}, list(ours), n_boot=200)
+    assert same["n"] == 4 and same["diff"] == 0 and same["ci"] == (0, 0)
+    flipped = {k: (l, None if s is None else 1 - s) for k, (l, s) in ours.items()}
+    opp = ss.paired_auroc_diff(ours, flipped, list(ours), n_boot=200)
+    assert opp["diff"] == 1.0 and opp["ci"] == (1.0, 1.0)
+
+def test_cli_compare_with_combiner_and_paired_test(tmp_path, root, capsys):
+    d = _run(tmp_path, [R("h1", 1, {"AST01": 0.0, "AST04": 0.3}), R("f1", 0, {"AST01": 0.9, "AST04": 0.02})])
+    _cfg(d, split="source_disjoint", part="test")
+    ss.main(["compare", str(d), "--method", "ast10", "--combine", "AST04", "--skillscreen", str(root),
+             "--protocol", "sd", "--threshold", "0.1", "--paired", "direct-s42", "--n-boot", "50"])
+    out = capsys.readouterr().out
+    assert "| ours | 2 | 1.000 |" in out and "Paired AUROC, ours - direct-s42: 0.000 [0.000, 0.000] on 2 skills" in out
+    with pytest.raises(SystemExit, match="no SkillScreen file nope.csv"):
+        ss.main(["compare", str(d), "--method", "ast10", "--skillscreen", str(root), "--protocol", "sd",
+                 "--threshold", "0.1", "--paired", "nope"])
+
+def test_cli_export_with_combiner_feeds_paired_test(tmp_path, root, capsys):
+    d = _run(tmp_path, [R("h1", 1, {"AST01": 0.0, "AST04": 0.3}), R("f1", 0, {"AST01": 0.9, "AST04": 0.02}),
+                        R("h1", 1, {"malicious": 0.1}, "naive-llm"), R("f1", 0, {"malicious": 0.2}, "naive-llm")])
+    _cfg(d, split="source_disjoint", part="test")
+    naive = tmp_path / "naive.csv"
+    ss.main(["export", str(d), "--method", "naive-llm", "--out", str(naive)])
+    ss.main(["export", str(d), "--method", "ast10", "--combine", "AST04", "--out", str(tmp_path / "a4.csv")])
+    assert (tmp_path / "a4.csv").read_text() == "benchmark_id,label,score\nf1,0,0.02\nh1,1,0.3\n"
+    ss.main(["compare", str(d), "--method", "ast10", "--combine", "AST04", "--skillscreen", str(root),
+             "--protocol", "sd", "--threshold", "0.1", "--paired", str(naive), "--n-boot", "50"])
+    assert f"Paired AUROC, ours - {naive}: 1.000 [1.000, 1.000] on 2 skills" in capsys.readouterr().out

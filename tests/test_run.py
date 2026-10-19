@@ -172,6 +172,18 @@ def test_hosted_run_records_backend_and_usage_with_workers(tmp_path, monkeypatch
     ast = next(r for r in rows if r["method"] == "ast10")
     assert ast["usage"]["calls"] == 1 and ast["usage"]["served"] == ["typesafe/jev-1.14-20261010|TypeSafe"]
 
+def test_provider_is_recorded_and_resume_refuses_another(tmp_path, monkeypatch):
+    import pytest
+    _fake_hosted(monkeypatch)
+    kw = dict(n=4, methods=["generic-1q"], df=_hosted_df(4), backend="openrouter", model="typesafe/jev-1.14")
+    out = runmod.run(out=str(tmp_path / "r"), provider="typesafe", **kw)
+    assert json.loads((out / "config.json").read_text())["provider"] == "typesafe"
+    with pytest.raises(ValueError, match="provider"):
+        runmod.run(resume=out, provider="other", **kw)
+    with pytest.raises(ValueError, match="provider"):
+        runmod.run(resume=out, **kw)
+    runmod.run(resume=out, provider="typesafe", **kw)
+
 def test_max_cost_stops_and_resume_continues(tmp_path, monkeypatch):
     import pytest
     _fake_hosted(monkeypatch, cost=0.01)

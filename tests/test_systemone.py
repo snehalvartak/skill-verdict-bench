@@ -77,6 +77,26 @@ def test_openrouter_request_shape_and_usage(monkeypatch, hosted):
     assert u["calls"] == 2 and u["input_tokens"] == 240 and u["cost"] == pytest.approx(0.0003)
     assert u["served"] == ["cloudflare/clef-flash-20261001|Cloudflare"] and systemone.take_usage() is None
 
+def test_openrouter_provider_pin_is_sent_and_checked(monkeypatch, capsys):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "k")
+    systemone.configure("openrouter", "cloudflare/clef-flash", provider="cloudflare")
+    seen = []
+    other = {**_answer(0.4), "provider": "PrimeIntellect"}
+    _fake(monkeypatch, [_answer(0.6), other], seen)
+    assert systemone.ask("x", Q) == {"q": 0.6}
+    assert seen[0]["body"]["provider"] == {"only": ["cloudflare"], "allow_fallbacks": False}
+    assert systemone.ask("x", Q) == {"q": None}  # served by another provider: unscored, never pooled
+    assert "not the pinned provider" in capsys.readouterr().err
+    with pytest.raises(ValueError, match="only applies"):
+        systemone.configure("ollama", provider="cloudflare")
+    systemone.configure()
+
+def test_openrouter_unpinned_body_has_no_provider(monkeypatch, hosted):
+    seen = []
+    _fake(monkeypatch, [_answer(0.5)], seen)
+    systemone.ask("x", Q)
+    assert "provider" not in seen[0]["body"]
+
 def test_openrouter_state_as_object(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "k")
     systemone.configure("openrouter", "typesafe/jev-1.14", state_format="object")

@@ -1,6 +1,6 @@
 name: Dashboard
 
-# Publishes site/ (the experiment 004 dashboard) to GitHub Pages. site/data.json is built locally with
+# Publishes site/ (the results dashboard) to GitHub Pages. site/data.json is built locally with
 # scripts/build_dashboard.py, which needs a SkillScreen checkout, and committed.
 on:
   push:

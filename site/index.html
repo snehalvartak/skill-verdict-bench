@@ -108,6 +108,45 @@ table.data td.n, table.data th.n { text-align: right; }
 .notes { font-size: 13px; color: var(--text-secondary); }
 .notes li { margin-bottom: 6px; }
 footer { font-size: 12px; color: var(--text-muted); margin-top: 24px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: 20px 0 0; overflow-x: auto; }
+.tabs button { border: 0; background: none; color: var(--text-secondary); font: inherit; font-size: 14px; padding: 9px 14px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--text-primary); font-weight: 600; border-bottom-color: var(--accent); }
+.view[hidden], #cmp-card[hidden] { display: none; }
+@media (max-width: 600px) { .cmp .q { min-width: 150px; max-width: 170px; } .cmp td.c { min-width: 96px; } }
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.filters label { font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 3px; }
+input[type=search] { font: inherit; font-size: 14px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); width: 100%; }
+table.data tbody tr:hover { background: var(--surface-0); }
+table.data th button { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; }
+table.data th button:hover { color: var(--text-primary); }
+.badge { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-secondary); }
+.badge.mal { color: var(--s2); border-color: currentColor; }
+.out-good { color: var(--good); }
+.out-bad { color: var(--s2); font-weight: 600; }
+.pick { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0; font-size: 13px; color: var(--text-secondary); }
+.cmp { width: 100%; min-width: 560px; border-collapse: separate; border-spacing: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+.cmp th, .cmp td { padding: 8px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; text-align: left; background: var(--surface-1); }
+.cmp thead th { position: sticky; top: 0; font-weight: 600; z-index: 1; }
+.cmp .q { min-width: 260px; max-width: 340px; position: sticky; left: 0; z-index: 1; border-right: 1px solid var(--grid); }
+.cmp .q small { display: block; color: var(--text-muted); margin-top: 2px; }
+.cmp tr.grp th { background: var(--surface-0); color: var(--text-secondary); font-weight: 600; font-size: 12px; position: static; }
+.cmp td.c { min-width: 120px; }
+.cmp .meter { height: 6px; border-radius: 3px; background: var(--grid); margin-top: 5px; overflow: hidden; }
+.cmp .meter i { display: block; height: 100%; background: var(--axis); }
+.cmp .meter i.on { background: var(--s2); }
+.cmp .flag { font-weight: 600; color: var(--s2); }
+.cmp .sub2 { color: var(--text-muted); font-weight: 400; display: block; }
+.cmp .x { float: right; border: 0; background: none; color: var(--text-muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px; }
+.empty { color: var(--text-secondary); padding: 16px 0; font-size: 14px; }
+.exp { border-top: 1px solid var(--grid); padding: 12px 0; }
+.exp:first-of-type { border-top: 0; }
+.exp h3 { font-size: 15px; margin: 0 0 4px; }
+.exp dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; margin: 8px 0; font-size: 13px; }
+.exp dt { color: var(--text-muted); } .exp dd { margin: 0; color: var(--text-secondary); }
+.exp details { margin: 6px 0; font-size: 13px; }
+.exp summary { cursor: pointer; color: var(--text-primary); font-weight: 500; }
+.exp ol { margin: 6px 0 4px; padding-left: 20px; color: var(--text-secondary); }
+.exp ol li { margin-bottom: 6px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 </head>
@@ -128,6 +167,13 @@ footer { font-size: 12px; color: var(--text-muted); margin-top: 24px; }
   <button type="button" class="ghost" id="theme" aria-label="Toggle colour theme">Theme</button>
 </div>
 
+<div class="tabs" role="tablist" aria-label="Views" id="tabs">
+  <button type="button" role="tab" id="tab-results" data-v="results" aria-selected="true" aria-controls="view-results">Results</button>
+  <button type="button" role="tab" id="tab-skills" data-v="skills" aria-selected="false" aria-controls="view-skills">Skills</button>
+  <button type="button" role="tab" id="tab-exps" data-v="exps" aria-selected="false" aria-controls="view-exps">Experiments and questions</button>
+</div>
+
+<div class="view" id="view-results" role="tabpanel" aria-labelledby="tab-results">
 <section class="tiles" id="tiles" aria-label="Headline numbers"></section>
 
 <section class="card summary" aria-labelledby="sum-h">
@@ -186,6 +232,38 @@ footer { font-size: 12px; color: var(--text-muted); margin-top: 24px; }
   </ul>
 </section>
 
+</div>
+
+<div class="view" id="view-skills" role="tabpanel" aria-labelledby="tab-skills" hidden>
+<section class="card" id="cmp-card" hidden style="margin-top:16px" aria-labelledby="cmp-h">
+  <h2 id="cmp-h">Side by side</h2>
+  <p class="sub" id="cmp-sub"></p>
+  <div class="scroll" id="cmp"></div>
+</section>
+<section class="card" aria-labelledby="sk-h">
+  <h2 id="sk-h">Skills</h2>
+  <p class="sub">Every test skill in the selected test set, with the score each method gave it. Tick up to four skills and a side-by-side comparison against the exact questions the model was asked appears above this table.</p>
+  <div class="filters">
+    <div><label for="f-q">Search skill id</label><input type="search" id="f-q" placeholder="e.g. ASB04"></div>
+    <div><label for="f-y">Label</label><select id="f-y"><option value="">All</option><option value="1">Malicious</option><option value="0">Benign</option></select></div>
+    <div><label for="f-s">Source</label><select id="f-s"></select></div>
+    <div><label for="f-m">Judge by</label><select id="f-m"></select></div>
+    <div><label for="f-o">Outcome</label><select id="f-o"><option value="">All</option><option value="miss">Missed (malicious, not flagged)</option><option value="fa">False alarm (benign, flagged)</option><option value="hit">Caught</option><option value="clear">Cleared</option></select></div>
+  </div>
+  <div class="pick"><span id="sk-count"></span><span id="sk-thr"></span></div>
+  <div class="scroll"><table class="data" id="sk-table"></table></div>
+  <p><button type="button" class="ghost" id="sk-more">Show more</button></p>
+</section>
+</div>
+
+<div class="view" id="view-exps" role="tabpanel" aria-labelledby="tab-exps" hidden>
+<section class="card" aria-labelledby="ex-h" style="margin-top:16px">
+  <h2 id="ex-h">What each experiment asked the model</h2>
+  <p class="sub">The research question, the data and the exact questions put to <code>clef-flash</code> for each method. A "yes" answer is scored as the probability that the first statement is true. The Skills view shows scores from experiment 004 only.</p>
+  <div id="exps"></div>
+</section>
+</div>
+
 <footer>
   Data: <a href="https://huggingface.co/datasets/ProtectSkills/MaliciousSkillBench">MaliciousSkillBench</a> (CC BY 4.0) and SkillScreen predictions (Huang et al., 2026, CC BY 4.0). Scores and ids only; no skill text is published here.
   Source and raw results: <a href="https://github.com/snehalvartak/skill-verdict-bench">snehalvartak/skill-verdict-bench</a>, <code>results/exp004/</code>.
@@ -212,7 +290,7 @@ const TABLE_ROWS = [...METHODS.slice(0, 4),
 const RULES = { youden: "Youden's J", tpr95: "TPR ≥ 95%", fpr05: "FPR ≤ 5%" };
 const SVGNS = "http://www.w3.org/2000/svg";
 const state = { p: "sd", hidden: new Set(), method: "logreg", t: null, preset: "fpr05", fx: null };
-let DATA, cache = {};
+let DATA, Q, cache = {};
 
 const $ = id => document.getElementById(id);
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -459,10 +537,124 @@ function table() {
   }
 }
 
-function render() { tiles(); rocChart(); explorer(); sourceChart(); table(); }
+
+// ---------- skills drill-down ----------
+const sk = { q: "", y: "", s: "", m: "max", o: "", sort: "score", dir: -1, shown: 50, picked: [] };
+const MAXPICK = 4;
+const flagAt = k => DATA.protocols[state.p].thresholds[k] ? DATA.protocols[state.p].thresholds[k].fpr05 : (["AST01", "AST02", "AST03", "AST05"].includes(k) ? DATA.protocols[state.p].thresholds.max.fpr05 : 0.5);
+function outcome(s, k) {
+  const v = s.s[k]; if (v == null) return null;
+  const f = v >= flagAt(k);
+  return s.y ? (f ? "hit" : "miss") : (f ? "fa" : "clear");
+}
+const OUT = { hit: ["Caught", "out-good"], clear: ["Cleared", "out-good"], miss: ["Missed", "out-bad"], fa: ["False alarm", "out-bad"] };
+function skillRows() {
+  const P = DATA.protocols[state.p], q = sk.q.trim().toLowerCase();
+  const rows = P.skills.filter(s => (!q || s.id.toLowerCase().includes(q)) && (sk.y === "" || String(s.y) === sk.y) && (!sk.s || s.src === sk.s) && (!sk.o || outcome(s, sk.m) === sk.o));
+  const val = s => sk.sort === "id" ? s.id : (s.s[sk.m] ?? -1);
+  return rows.sort((a, b) => (val(a) < val(b) ? -1 : val(a) > val(b) ? 1 : 0) * sk.dir || (a.id < b.id ? -1 : 1));
+}
+function skills() {
+  const P = DATA.protocols[state.p], mName = METHODS.find(m => m.k === sk.m).name;
+  const fs = $("f-s"), prev = sk.s;
+  if (!fs.options.length || fs.dataset.p !== state.p) {
+    fs.replaceChildren(); const o0 = h("option", "All"); o0.value = ""; fs.append(o0);
+    for (const n of [...new Set(P.skills.map(x => x.src))].sort()) { const o = h("option", n); o.value = n; fs.append(o); }
+    fs.dataset.p = state.p; if (![...fs.options].some(o => o.value === prev)) sk.s = ""; fs.value = sk.s;
+  }
+  const fm = $("f-m");
+  if (!fm.options.length) for (const m of METHODS) { const o = h("option", m.name); o.value = m.k; fm.append(o); }
+  fm.value = sk.m;
+  const rows = skillRows(), page = rows.slice(0, sk.shown);
+  $("sk-count").textContent = `${rows.length.toLocaleString()} of ${P.skills.length.toLocaleString()} skills`;
+  $("sk-thr").textContent = `${mName} flags at score ≥ ${flagAt(sk.m).toFixed(4)}` + (P.thresholds[sk.m] ? " (validation threshold, FPR ≤ 5%)" : " (native 0.5)");
+  const t = $("sk-table"); t.replaceChildren();
+  const th = (label, key, cls) => { const c = h("th"); if (cls) c.className = cls;
+    if (key) { const b = h("button", label + (sk.sort === key ? (sk.dir < 0 ? " ↓" : " ↑") : "")); b.type = "button"; c.setAttribute("aria-sort", sk.sort === key ? (sk.dir < 0 ? "descending" : "ascending") : "none");
+      b.onclick = () => { sk.sort === key ? sk.dir *= -1 : (sk.sort = key, sk.dir = key === "id" ? 1 : -1); skills(); }; c.append(b); } else c.textContent = label; return c; };
+  const hr = h("tr"); hr.append(th("Compare"), th("Skill", "id"), th("Label"), th("Source"), th("Category"), th("Score", "score", "n"), th("Outcome")); t.append(hr);
+  const body = h("tbody");
+  for (const s of page) {
+    const tr = h("tr"), cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = sk.picked.includes(s.id);
+    cb.setAttribute("aria-label", `Compare ${s.id}`); cb.disabled = !cb.checked && sk.picked.length >= MAXPICK;
+    cb.onchange = () => { cb.checked ? sk.picked.push(s.id) : sk.picked.splice(sk.picked.indexOf(s.id), 1); skills(); };
+    const c0 = h("td"); c0.append(cb);
+    const lab = h("span", s.y ? "Malicious" : "Benign", "badge" + (s.y ? " mal" : ""));
+    const o = outcome(s, sk.m), oc = h("td"); if (o) oc.append(h("span", OUT[o][0], OUT[o][1])); else oc.textContent = "Unscored";
+    const lc = h("td"), sc = h("td", f3(s.s[sk.m]), "n"); lc.append(lab);
+    tr.append(c0, h("td", s.id), lc, h("td", s.src), h("td", s.cat || "–"), sc, oc); body.append(tr);
+  }
+  t.append(body);
+  $("sk-more").style.display = rows.length > sk.shown ? "" : "none";
+  compare();
+}
+function compare() {
+  const box = $("cmp"), P = DATA.protocols[state.p]; box.replaceChildren(); $("cmp-card").hidden = !sk.picked.length;
+  const picked = sk.picked.map(id => P.skills.find(s => s.id === id)).filter(Boolean);
+  $("cmp-sub").textContent = "Left: the question the model was asked. Right: the score it gave each ticked skill. A bar fills to the score; a flagged score is orange and marked.";
+  if (!picked.length) { box.append(h("p", "Tick skills in the table above to compare them here.", "empty")); return; }
+  const t = h("table", null, "cmp"), head = h("tr"), hq = h("th", "Question asked", "q"); head.append(hq);
+  for (const s of picked) {
+    const c = h("th"), x = h("button", "×", "x"); x.type = "button"; x.setAttribute("aria-label", `Remove ${s.id}`);
+    x.onclick = () => { sk.picked.splice(sk.picked.indexOf(s.id), 1); skills(); };
+    const o = outcome(s, sk.m);
+    c.append(x, document.createTextNode(s.id), h("span", `${s.y ? "Malicious" : "Benign"} · ${s.src}`, "sub2"), h("span", o ? `${METHODS.find(m => m.k === sk.m).name}: ${OUT[o][0]}` : "Unscored", "sub2"));
+    head.append(c);
+  }
+  const th = h("thead"); th.append(head); t.append(th);
+  const body = h("tbody"); t.append(body);
+  const group = name => { const tr = h("tr", null, "grp"), c = h("th", name); c.colSpan = picked.length + 1; tr.append(c); body.append(tr); };
+  const row = (k, title, note) => {
+    const tr = h("tr"), q = h("td", null, "q"); q.append(document.createTextNode(title)); if (note) q.append(h("small", note)); tr.append(q);
+    for (const s of picked) {
+      const v = s.s[k], td = h("td", null, "c");
+      if (v == null) td.textContent = "–"; else {
+        const on = v >= flagAt(k); td.append(document.createTextNode(f3(v)));
+        if (on) td.append(document.createTextNode(" "), h("span", "flagged", "flag"));
+        const m = h("div", null, "meter"), i = h("i", null, on ? "on" : ""); i.style.width = (100 * v) + "%"; m.append(i); td.append(m);
+      }
+      tr.append(td);
+    }
+    body.append(tr);
+  };
+  group("Ground truth");
+  { const tr = h("tr"), q = h("td", "Benchmark label", "q"); tr.append(q); for (const s of picked) tr.append(h("td", s.y ? "Malicious" : "Benign", "c")); body.append(tr); }
+  group("Five targeted questions, one call each (ast10-split)");
+  for (const c of Q.sets.ast10) row(c.id, `${c.id}: ${c.text}`, `Yes means: ${c.yes}`);
+  row("max", "Highest of the five", "Flags if any one check is flagged");
+  row("AST04", "AST04 alone", "The metadata and injection question only");
+  row("logreg", "Weighted combination (logreg)", "Logistic regression on the five scores, fitted on training skills");
+  group("One generic question (generic-1q)");
+  for (const c of Q.sets["generic-1q"]) row("generic", c.text, `Yes means: ${c.yes}`);
+  group("SkillScreen's published methods (different models, no per-question scores)");
+  for (const m of METHODS.slice(4)) row(m.k, m.name, "Flags at 0.5");
+  box.append(t);
+}
+function experiments() {
+  const box = $("exps"); box.replaceChildren();
+  for (const e of Q.experiments) {
+    const d = h("div", null, "exp"); d.append(h("h3", `${e.id} · ${e.title}`), h("p", e.asks, "sub"));
+    const dl = h("dl"); for (const [k, v] of [["Data", e.data], ["Model", e.model], ["Methods", e.methods.join(", ")]]) dl.append(h("dt", k), h("dd", v)); d.append(dl);
+    for (const m of e.methods) {
+      const qs = Q.sets[m], det = h("details"), sm = h("summary", qs ? `${m}: ${qs.length} question${qs.length > 1 ? "s" : ""}` : `${m}: no questions (keyword scanner)`);
+      det.append(sm);
+      if (qs) { const ol = h("ol"); for (const c of qs) { const li = h("li", c.text); li.append(h("small", `  Yes: ${c.yes} No: ${c.no}`, "")); ol.append(li); } det.append(ol); }
+      if (m === e.methods[0]) det.open = true;
+      d.append(det);
+    }
+    box.append(d);
+  }
+}
+function showView(v) {
+  for (const b of $("tabs").querySelectorAll("button")) b.setAttribute("aria-selected", String(b.dataset.v === v));
+  for (const x of ["results", "skills", "exps"]) $("view-" + x).hidden = x !== v;
+  if (v === "results") { rocChart(); sourceChart(); }
+}
+
+function render() { tiles(); rocChart(); explorer(); sourceChart(); table(); skills(); }
 
 function selectProtocol(p) {
-  state.p = p;
+  state.p = p; sk.picked = []; sk.shown = 50;
   for (const b of $("split").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.p === p));
   resetThreshold();
 }
@@ -471,8 +663,12 @@ function resetThreshold() {
   state.t = pick[2]; state.preset = pick[0]; $("slider").value = tToSlider(state.t); render();
 }
 
-fetch("data.json").then(r => r.json()).then(d => {
-  DATA = d;
+Promise.all([fetch("data.json").then(r => r.json()), fetch("questions.json").then(r => r.json())]).then(([d, q]) => {
+  DATA = d; Q = q; experiments();
+  for (const b of $("tabs").querySelectorAll("button")) b.onclick = () => showView(b.dataset.v);
+  $("f-q").oninput = e => { sk.q = e.target.value; sk.shown = 50; skills(); };
+  for (const [id, key] of [["f-y", "y"], ["f-s", "s"], ["f-m", "m"], ["f-o", "o"]]) $(id).onchange = e => { sk[key] = e.target.value; sk.shown = 50; skills(); };
+  $("sk-more").onclick = () => { sk.shown += 50; skills(); };
   $("meta").textContent = `Model: ${d.model}, served as ${d.served.split("|").slice(0, 2).join(" by ")}. Methods: five targeted OWASP AST checks and one generic question per skill.`;
   for (const b of $("split").querySelectorAll("button")) b.onclick = () => selectProtocol(b.dataset.p);
   $("method").onchange = e => { state.method = e.target.value; resetThreshold(); };
@@ -484,9 +680,9 @@ fetch("data.json").then(r => r.json()).then(d => {
   };
   try { const t = localStorage.getItem("svb-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
-  let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { rocChart(); sourceChart(); }, 150); });
+  let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (!$("view-results").hidden) { rocChart(); sourceChart(); } }, 150); });
   selectProtocol("sd");
-}).catch(e => { $("tiles").textContent = "Could not load data.json: " + e.message; });
+}).catch(e => { $("tiles").textContent = "Could not load dashboard data: " + e.message; });
 </script>
 </body>
 </html>

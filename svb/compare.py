@@ -17,11 +17,13 @@ def main(dirs):
     llm = [m for m in ("ast10", "ast10-split", "naive-llm", "naive-x5") if m in by]
     print("| method | AUC | Youden t | TPR | FPR |\n|---|---|---|---|---|")
     for m in llm:
+        if len({r["label"] for r in by[m]}) < 2:
+            print(f"| {m} | n/a (needs malicious and benign skills) | | | |"); continue
         t = youden_threshold(by[m]); s = metrics_at(by[m], t)
         print(f"| {m} | {auc(by[m]):.3f} | {t:.3f} | {s['recall']:.2f} | {s['fp'] / (s['fp'] + s['tn']):.2f} |")
     print("\n| paired difference | AUC diff 95% CI |\n|---|---|")
     for a, b in PAIRS:
-        if a in by and b in by:
+        if a in by and b in by and auc(by[a]) is not None and auc(by[b]) is not None:
             lo, hi = auc_diff_ci(by[a], by[b]); print(f"| {a} - {b} | {auc(by[a]) - auc(by[b]):+.3f} [{lo:+.3f}, {hi:+.3f}] |")
     print("\n| check | ast10 (batched) | ast10-split |\n|---|---|---|")
     if "ast10" in by and "ast10-split" in by:

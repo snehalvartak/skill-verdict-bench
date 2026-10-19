@@ -34,7 +34,7 @@ Requires Python 3.11+, [uv](https://docs.astral.sh/uv/) and a running [Ollama](h
 
 ```bash
 uv sync
-uv run pytest -q                                   # 87 tests, no Ollama needed
+uv run pytest -q                                   # 94 tests, no Ollama needed
 uv run python -m svb.run --n 200 --seed 0          # prints a run dir under runs/
 uv run python -m svb.score runs/<run_id>           # metrics, AUC and threshold-sweep tables
 uv run python -m svb.heldout --train runs/<train> --val runs/<val> --test runs/<test>   # held-out evaluation
@@ -79,7 +79,7 @@ The dataset contains real malicious skill text. Treat it as data to read, never 
 ```
 svb/systemone.py   Ollama client for /v1/systemone
 svb/checks.py      AST01 to AST05 questions, threshold, truncation limit
-svb/methods.py     ast10, naive-llm, regex
+svb/methods.py     ast10, naive-llm, regex, and the controls naive-x5 and ast10-split
 svb/data.py        pinned dataset download and hash check, split filter, stratified sampling
 svb/run.py         run methods over a sample, write predictions.jsonl + config.json
 svb/score.py       precision, recall, F1, AUC, threshold sweep, bootstrap CIs, per-check hit rates and AUC, recall by attack category

@@ -34,7 +34,7 @@ Requires Python 3.11+, [uv](https://docs.astral.sh/uv/) and a running [Ollama](h
 
 ```bash
 uv sync
-uv run pytest -q                                   # 101 tests, no Ollama needed
+uv run pytest -q                                   # 109 tests, no Ollama needed
 uv run python -m svb.run --n 200 --seed 0          # prints a run dir under runs/
 uv run python -m svb.score runs/<run_id>           # metrics, AUC and threshold-sweep tables
 uv run python -m svb.heldout --train runs/<train> --val runs/<val> --test runs/<test>   # held-out evaluation
@@ -52,6 +52,8 @@ uv run python -m svb.skillscreen export runs/<run_id> --method ast10 --out ast10
 # score by AST04 alone or a fitted logistic regression instead of the max, and test AUROC against another method:
 uv run python -m svb.skillscreen compare runs/<run_id> --method ast10-split --combine logreg --weights=<from svb.heldout> --skillscreen ../SkillScreen --protocol sd --threshold <t> --paired typesafe
 ```
+
+Experiment 004 runs unattended: `bash scripts/exp004_overnight.sh` (start it with `nohup`; see `docs/superpowers/plans/2026-10-19-overnight-brief.md`). It resumes where it stopped and writes `runs/exp004/summary.md`.
 
 Runs created before `--part` existed (including experiment 001) have no `part` in their `config.json`, so `--resume` refuses them. They can still be scored; to continue one, start a fresh run.
 

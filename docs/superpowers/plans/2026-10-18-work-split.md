@@ -44,3 +44,7 @@ If a change needs a file the other side owns, say so in the PR description and k
 - **Merging:** merge `main` into your branch before pushing, and keep PRs small.
 - **Resume compatibility:** do not add keys to `config.json` that existing runs lack. If one is needed, write it only when the new option is used.
 - **Licensing:** SkillScreen's predictions (CC BY 4.0) are read from a local clone and never committed here.
+
+## Update, 2026-10-19
+
+To let experiment 004 run unattended overnight, the cloud session made the remaining 004 code changes in local-owned files (`svb/run.py` `--ids`/`--out`, `svb/heldout.py` thresholds/baseline/`--json`, and a faster rank-based `_auc` in `svb/score.py` with identical results), plus `scripts/exp004_overnight.sh`. The local session now only starts the runner and reports; see `docs/superpowers/plans/2026-10-19-overnight-brief.md`.

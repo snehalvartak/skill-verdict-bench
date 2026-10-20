@@ -59,32 +59,57 @@ table.ops{width:100%;border-collapse:collapse;font:12.5px var(--mono);min-width:
 table.list{width:100%;border-collapse:collapse;font-size:12.5px}table.list th,table.list td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--grid)}table.list th{font-weight:500;color:var(--ink3);font-size:11px}
 .quad{grid-template-columns:1fr 1fr}.quad span{font:11px var(--mono);color:var(--ink3);display:block}
 .empty{color:var(--ink3);font-size:13px;padding:10px 0}
+.hero{margin-top:10px}.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}.kpi{border:1px solid var(--line);border-radius:10px;padding:10px 12px}.kpi b{display:block;font:700 34px var(--font);line-height:1.1}.kpi small{display:block;color:var(--ink3);font:11px var(--mono);margin-top:2px}.kpi span{font-size:12.5px;color:var(--ink2)}
+.hero .row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-top:10px}.hero a,.hero button,#sh-go{font:inherit;font-size:13px}#sh-go,.hero button.ghost{margin-top:10px;padding:6px 12px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer}
+.interp{font-size:13px;color:var(--ink2);max-width:80ch}.tlc{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:14px}.tlc>div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}.tlc .n{font:600 12px var(--mono);color:var(--accent)}.tlc h3{font-size:14px;margin:4px 0}.tlc .d{font:11px var(--mono);color:var(--ink3)}.tlc p{font-size:13px;margin:0 0 6px}
+.meth{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;font-size:13px;margin:0}.meth dt{color:var(--ink3)}.meth dd{margin:0;overflow-wrap:anywhere}.cmd{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font:12px var(--mono);overflow-x:auto}
+.bar:not(.stuck) #bar-p{display:none}
+@media (max-width:560px){.kpi b{font-size:26px}.meth{grid-template-columns:1fr}}
 </style>
 <div class="wrap">
-<nav class="rail" aria-label="Sections"><b>Workbench</b><a href="#lineage">Lineage</a><a href="#design">Design</a><a href="#instruments">Questions</a><a href="#results">Results</a><a href="#failures">Where it fails</a><a href="#explorer">Skill explorer</a><a href="#transfer">Threshold transfer</a></nav>
+<nav class="rail" aria-label="Sections"><b>Workbench</b><a href="#hero">The finding</a><a href="#results">Does it hold</a><a href="#transfer">Threshold transfer</a><a href="#instruments">Questions</a><a href="#lineage">How we tested</a><a href="#failures">Where it fails</a><a href="#skillharm">SkillHarm</a><a href="#explorer">Skill explorer</a><a href="#method">Reproduce</a></nav>
 <main>
 <header><span class="tag">Experiments 001 to 005 · real data</span>
-<h1>Skill Verdict Bench: results workbench</h1>
-<p class="lede">Two controls at the top drive every figure: which held-out test set, and where the flag threshold sits. Everything else is a way to move from a number to the skills behind it. Each interactive figure says why it is interactive.</p></header>
+<h1>Do five targeted questions find malicious agent skills better than one generic question?</h1>
+<div class="fig hero" id="hero"></div></header>
 
 <div class="bar" role="group" aria-label="Global controls">
- <div><span class="lb">Test set</span><div class="seg" id="seg-p"><button type="button" data-p="sd" aria-pressed="true">Source-disjoint</button><button type="button" data-p="msd" aria-pressed="false">Structurally disjoint</button></div></div>
+ <div id="bar-p"><span class="lb">Test set</span><div class="seg" id="seg-p"><button type="button" data-p="sd" aria-pressed="true">Source-disjoint</button><button type="button" data-p="msd" aria-pressed="false">Structurally disjoint</button></div></div>
  <div><span class="lb">Threshold</span><div class="seg" id="seg-m"><button type="button" data-m="val" aria-pressed="true">Chosen on validation</button><button type="button" data-m="fpr" aria-pressed="false">Same FPR on test</button></div></div>
  <div id="ctl-val"><label for="rule">Validation rule</label><select id="rule"><option value="fpr05">FPR ≤ 5%</option><option value="youden">Youden's J</option><option value="tpr95">TPR ≥ 95%</option></select></div>
  <div id="ctl-fpr" hidden><label for="fpr">Target false positive rate: <b id="fpr-v"></b><span class="explo">exploratory</span></label><input type="range" id="fpr" min="0" max="100" step="1" value="56"></div>
  <div class="read" id="bar-read" style="margin:0;flex:1;min-width:220px"></div>
 </div>
 
-<section id="lineage"><h2>Experiment lineage</h2><p class="sub">Each experiment exists because the previous one left a question open.</p>
-<div class="fig scroll"><table class="tl"><thead><tr><th>Run</th><th>Question</th><th>Data</th><th>What it found</th></tr></thead><tbody>
-<tr><td>001</td><td>Do per-risk questions beat one generic question?</td><td>200 skills, random split</td><td><b>0.80</b> AUC for the five questions against <b>0.63</b> for the generic one</td></tr>
-<tr><td>002</td><td>Is it the content, the max of five, or batching?</td><td>Same 200 skills</td><td>AST10 content <b>+0.12</b> over generic paraphrases; max-of-five <b>+0.045</b>; batching no change</td></tr>
-<tr><td>003</td><td>Do those hold when the threshold is chosen on separate data?</td><td>200 train · 200 val · 200 test</td><td>Logistic regression <b>+0.057</b> over the max; AST04 alone <b>+0.076</b> over the max</td></tr>
-<tr><td>004</td><td>Do they hold on sources never seen in training?</td><td>1,384 source-disjoint · 1,947 structurally disjoint</td><td>Logreg minus generic <b>+0.139</b> [0.105, 0.172] and <b>+0.129</b> [0.105, 0.152]</td></tr>
-<tr><td>005</td><td>Does 004 reproduce, and is five separate calls better than the same five questions in one?</td><td>Same test skills as 004</td><td>Scores identical to 004 (Spearman 1.000, largest difference 0). Five calls: AUROC <b>0.672</b>; one call: <b>0.656</b></td></tr>
-</tbody></table></div></section>
 
-<section id="design"><h2>Experimental design</h2><p class="sub">What was fitted on which data, and what was only measured.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+<section id="results"><h2>Results</h2><p class="sub">ROC with a log false-positive axis, because a screening tool works below 5%. Dots mark the current threshold on each curve.</p><p class="interp"><b>Two questions.</b> Which method ranks malicious skills above benign ones (the ROC curves and AUROC) does not depend on the threshold. What happens when you flag at a threshold (the operating-point table) does. A curve closer to the top left is better. Filled dots are this repository's runs; hollow ones are SkillScreen's published models, scored by their authors, so descriptive only.</p>
+<div class="two"><div class="fig"><p class="why"><b>Why interactive</b>The curves cross. Which method wins depends on the false positive rate you can afford, so you read all of them at one rate.</p><div class="legend" id="legend"></div><div id="roc"></div><div class="read" id="roc-read">Hover or use the arrow keys on the chart to read every method at one false positive rate.</div></div>
+<div class="fig"><h3>AUROC with 95% intervals</h3><div id="forest"></div><div class="guide"><ul><li>Filled dot: this experiment's model, with interval.</li><li>Hollow dot: SkillScreen's published models, scored by their authors, so descriptive only.</li></ul></div></div></div>
+<div class="fig scroll" style="margin-top:14px"><h3>Operating point <span class="explo" id="ops-flag" hidden>exploratory</span></h3><p class="why"><b>Why interactive</b>Reads the same threshold as every other figure, so the numbers in this table are the ones behind the dots, panels and heat map.</p><div id="ops"></div></div><div class="fig scroll" style="margin-top:14px"><h3>Paired difference from the generic question</h3><p class="why"><b>Why it is here</b>Both methods are scored on the same skills, so the interval is on the difference itself, not on two overlapping intervals.</p><div id="paired"></div></div></section>
+
+<section id="transfer"><h2>Does the validation threshold transfer?</h2><p class="sub">Each threshold was chosen to give 5% false positives on validation. This is the rate it produced on the test sources, with 95% intervals. It follows the test-set switch and is fixed by the pre-registration.</p><p class="interp"><b>How to read it.</b> If the interval around a dot excludes the 5% line, the threshold chosen on validation did not transfer to the test sources.</p>
+<div class="fig"><div style="max-width:640px" id="dumb"></div></div></section>
+
+<section id="instruments"><h2>How each question behaves</h2><p class="sub">Score distributions for malicious and benign skills. The dashed line is the current threshold: orange to its left is a missed malicious skill, blue to its right is a false alarm.</p><p class="interp"><b>How to read it.</b> Orange mass left of the dashed line is malicious skills the question misses at this threshold; blue mass to its right is false alarms.</p>
+<div class="fig"><p class="why"><b>Why interactive</b>The threshold is the decision. Moving it shows what each question gives up, and the readouts update with it.</p>
+<div class="key"><span><i style="background:var(--mal)"></i>Malicious</span><span><i style="background:var(--ben)"></i>Benign</span><span>x: score, log scale · y: share of class · hover a panel for bin counts</span></div>
+<div class="mini-grid" id="minis"></div></div></section>
+
+<section id="lineage"><h2>How we tested it: five experiments</h2><p class="sub">Each experiment exists because the previous one left a question open.</p><div class="tlc"><div><b class="n">001</b><h3>Do per-risk questions beat one generic question?</h3><p class="d">200 skills, random split</p><p><b>0.80</b> AUC for the five questions against <b>0.63</b> for the generic one</p></div><div><b class="n">002</b><h3>Is it the content, the max of five, or batching?</h3><p class="d">Same 200 skills</p><p>AST10 content <b>+0.12</b> over generic paraphrases; max-of-five <b>+0.045</b>; batching no change</p></div><div><b class="n">003</b><h3>Do those hold when the threshold is chosen on separate data?</h3><p class="d">200 train · 200 val · 200 test</p><p>Logistic regression <b>+0.057</b> over the max; AST04 alone <b>+0.076</b> over the max</p></div><div><b class="n">004</b><h3>Do they hold on sources never seen in training?</h3><p class="d">1,384 source-disjoint · 1,947 structurally disjoint</p><p>Logreg minus generic <b>+0.139</b> [0.105, 0.172] and <b>+0.129</b> [0.105, 0.152]</p></div><div><b class="n">005</b><h3>Does 004 reproduce, and is five separate calls better than the same five questions in one?</h3><p class="d">Same test skills as 004</p><p>Scores identical to 004 (Spearman 1.000, largest difference 0). Five calls: AUROC <b>0.672</b>; one call: <b>0.656</b></p></div></div></section>
+
+<section id="design"><h2>Design of the held-out tests</h2><p class="sub">What was fitted on which data, and what was only measured.</p>
 <div class="fig"><div class="flow">
 <div><b>Skill text</b>SKILL.md only, cut at 60,000 characters<span>1 call per question; batched variant: all five in one call</span></div>
 <div><b>Six questions</b>AST01 to AST05, plus the generic one<span>score = P(answer is yes)</span></div>
@@ -94,29 +119,26 @@ table.list{width:100%;border-collapse:collapse;font-size:12.5px}table.list th,ta
 <div class="key" style="margin-top:14px"><span><i style="background:var(--c1)"></i>Fit (train)</span><span><i style="background:var(--c2)"></i>Choose threshold (validation)</span><span><i style="background:var(--ink3)"></i>Measure (test)</span></div>
 <div class="split" id="split"></div></div></section>
 
-<section id="instruments"><h2>How each question behaves</h2><p class="sub">Score distributions for malicious and benign skills. The dashed line is the current threshold: orange to its left is a missed malicious skill, blue to its right is a false alarm.</p>
-<div class="fig"><p class="why"><b>Why interactive</b>The threshold is the decision. Moving it shows what each question gives up, and the readouts update with it.</p>
-<div class="key"><span><i style="background:var(--mal)"></i>Malicious</span><span><i style="background:var(--ben)"></i>Benign</span><span>x: score, log scale · y: share of class · hover a panel for bin counts</span></div>
-<div class="mini-grid" id="minis"></div></div></section>
+<section id="failures"><h2>Where it fails</h2><p class="sub">Share of skills flagged, by source and label, at the current threshold. Green outline: behaving (at least 70% of malicious flagged, or at most 30% of benign). Orange: not.</p><p class="interp"><b>How to read it.</b> Orange cells are where the detector is failing at the current threshold. The SkillHarm row is explained in the case study below.</p>
+<div class="fig scroll"><p class="why"><b>Why interactive</b>A pattern here is a claim about specific skills. Clicking a cell takes you to them in the explorer below.</p><div id="heat"></div></div></section>
 
-<section id="results"><h2>Results</h2><p class="sub">ROC with a log false-positive axis, because a screening tool works below 5%. Dots mark the current threshold on each curve.</p>
-<div class="two"><div class="fig"><p class="why"><b>Why interactive</b>The curves cross. Which method wins depends on the false positive rate you can afford, so you read all of them at one rate.</p><div class="legend" id="legend"></div><div id="roc"></div><div class="read" id="roc-read">Hover or use the arrow keys on the chart to read every method at one false positive rate.</div></div>
-<div class="fig"><h3>AUROC with 95% intervals</h3><div id="forest"></div><div class="guide"><ul><li>Filled dot: this experiment's model, with interval.</li><li>Hollow dot: SkillScreen's published models, scored by their authors, so descriptive only.</li></ul></div></div></div>
-<div class="fig scroll" style="margin-top:14px"><h3>Operating point <span class="explo" id="ops-flag" hidden>exploratory</span></h3><p class="why"><b>Why interactive</b>Reads the same threshold as every other figure, so the numbers in this table are the ones behind the dots, panels and heat map.</p><div id="ops"></div></div></section>
+<section id="skillharm"><h2>Case study: one source decides the headline</h2><p class="sub">SkillHarm supplies most of the malicious skills in the source-disjoint test set, and no detector that reads only <code>SKILL.md</code> can see why they are harmful.</p>
+<div class="fig"><div class="kpis" id="sh-strip"></div><p class="note"><b>SkillHarm.</b> Most of its malicious skills score low on all five questions. A reading of 20 sampled misses found 18 where <code>SKILL.md</code> only tells the agent to complete a mandatory preflight or setup step in another file that is not in the dataset, so there is no payload text for the questions to see. SkillScreen also reads <code>SKILL.md</code> only, so its high SkillHarm recall is not from reading those files; it may come from learning that phrasing or the source's style, which this data cannot separate from detecting harm. The sample was chosen by score, and the benchmark label, not the text, says these skills are harmful.</p><button type="button" id="sh-go">Show SkillHarm's malicious skills in the explorer</button></div>
+<div class="fig scroll" style="margin-top:14px"><h3>AUROC with and without SkillHarm</h3><p class="why"><b>Why it is here</b>One source accounts for most of the malicious skills in the source-disjoint set, so the headline number mostly measures that source. Removing it shows how each method does on the rest.</p><div id="noharm"></div></div></section>
 
-<section id="failures"><h2>Where it fails</h2><p class="sub">Share of skills flagged, by source and label, at the current threshold. Green outline: behaving (at least 70% of malicious flagged, or at most 30% of benign). Orange: not.</p>
-<div class="fig scroll"><p class="why"><b>Why interactive</b>A pattern here is a claim about specific skills. Clicking a cell takes you to them in the explorer below.</p><div id="heat"></div><p class="note"><b>SkillHarm.</b> Most of its malicious skills score low on all five questions. A reading of 20 sampled misses found 18 where <code>SKILL.md</code> only tells the agent to complete a mandatory preflight or setup step in another file that is not in the dataset, so there is no payload text for the questions to see. SkillScreen also reads <code>SKILL.md</code> only, so its high SkillHarm recall is not from reading those files; it may come from learning that phrasing or the source's style, which this data cannot separate from detecting harm. The sample was chosen by score, and the benchmark label, not the text, says these skills are harmful.</p>
-<div class="fig scroll" style="margin-top:14px"><h3>AUROC with and without SkillHarm</h3><p class="why"><b>Why it is here</b>One source accounts for most of the malicious skills in the source-disjoint set, so the headline number mostly measures that source. Removing it shows how each method does on the rest.</p><div id="noharm"></div></div></div></section>
-
-<section id="explorer"><h2>Skill explorer</h2><p class="sub">Disagreement between two methods is where the information is. Pick any pair, then drag a box to select skills.</p>
+<section id="explorer"><h2>Skill explorer</h2><p class="sub">Disagreement between two methods is where the information is. Pick any pair, then drag a box to select skills.</p><p class="interp"><b>How to read it.</b> Skills in the off-diagonal quadrants are ones the two methods disagree on. That is where to look for what each method sees or misses.</p>
 <div class="two"><div class="fig"><p class="why"><b>Why interactive</b>Which pair is informative depends on the question: a check against the generic question, or ours against SkillScreen. Brushing turns a region into a list of skills.</p>
 <div class="filt"><label for="ax" class="lb" style="margin:0">X</label><select id="ax"></select><label for="ay" class="lb" style="margin:0">Y</label><select id="ay"></select><button type="button" class="ghost" id="clr-brush">Clear box</button></div>
 <div class="key"><span><i style="background:var(--mal)"></i>Malicious</span><span><i style="background:var(--ben)"></i>Benign</span><span>dashed lines: flag thresholds</span></div><div id="scatter"></div><div class="quad" id="quad"></div></div>
 <div class="fig"><h3>Skills in view</h3><div class="filt" id="filt"></div><div id="list" class="scroll"></div></div></div>
 <div class="fig scroll" style="margin-top:14px"><h3>One skill, each experiment side by side</h3><p class="why"><b>Why interactive</b>A comparison needs the same skill scored by each run. Pick a skill from the list or the chart and read what each experiment and each question said about it.</p><div id="cmp"></div></div></section>
 
-<section id="transfer"><h2>Does the validation threshold transfer?</h2><p class="sub">Each threshold was chosen to give 5% false positives on validation. This is the rate it produced on the test sources, with 95% intervals. It follows the test-set switch and is fixed by the pre-registration.</p>
-<div class="fig"><div style="max-width:640px" id="dumb"></div></div></section>
+<section id="method"><h2>Method and reproduction</h2><p class="sub">Everything needed to check or repeat these numbers.</p>
+<div class="fig"><dl class="meth" id="meth"></dl>
+<p class="note" style="border:0;padding:0;margin-top:8px"><b>Limits.</b> One seed per sample; the hosted model has no pinned version, so a silent update would not be flagged (experiment 005 reproduced 004 exactly, which is the only check); only <code>SKILL.md</code> text is scored; the train and validation samples are small; comparisons with published models are descriptive because the models differ. The without-SkillHarm check was run after seeing the results.</p>
+<pre class="cmd">git clone https://github.com/snehalvartak/skill-verdict-bench &amp;&amp; cd skill-verdict-bench
+export OPENROUTER_API_KEY=...   # never written to a file
+bash scripts/exp005_overnight.sh   # about $2.40; results in runs/exp005/summary.md</pre></div></section>
 </main></div><script>
 "use strict";
 Promise.all([fetch("data.json").then(r=>r.json()),fetch("questions.json").then(r=>r.json())]).then(([RAW,Q])=>{
@@ -288,15 +310,53 @@ function noharm(){
   let o=`<table class="ops"><thead><tr><th>Method</th><th>All skills (${np(rows)} malicious, ${nn(rows)} benign)</th><th>Without SkillHarm (${np(rest)} malicious, ${nn(rest)} benign)</th></tr></thead><tbody>`;
   for(const k of ['max','logreg','ast10','generic','skillscreen','gpt55','typesafe'])o+=`<tr><td>${NAME[k]}</td><td>${f3(au(rows,k))}</td><td>${f3(au(rest,k))}</td></tr>`;
   $('noharm').innerHTML=o+'</tbody></table><p class="sub" style="margin-top:8px">'+(S.p==='sd'?'On the source-disjoint set the generic question is level with the targeted questions once SkillHarm is removed, so the advantage of the five questions in the headline AUROC comes from that one source. ':'SkillHarm is a small share of this test set, so removing it changes little. ')+'Point estimates without intervals. The remaining malicious set is small, and the benign skills come from few sources, so differences in style between sources can make the remaining task easier than it would be in practice.</p>'}
+
+/* ---------- hero, case study, method, paired ---------- */
+const auRows=(r,k)=>{const a=r.filter(s=>v(s,k)!=null),pos=a.filter(s=>s[1]).map(s=>v(s,k)),neg=a.filter(s=>!s[1]).map(s=>v(s,k));let w=0;for(const x of pos)for(const y of neg)w+=x>y?1:x===y?.5:0;return w/(pos.length*neg.length)};
+const ci=c=>`[${c[0].toFixed(2)}, ${c[1].toFixed(2)}]`;
+function hero(){
+  const A=P().auc.logreg,G=P().auc.generic,d=P().vs.logreg,hi=P().src.indexOf('SkillHarm'),rest=hi<0?null:SK().filter(s=>s[2]!==hi);
+  const wo=rest?` Without SkillHarm: ${f3(auRows(rest,'logreg'))} against ${f3(auRows(rest,'generic'))}. `+(S.p==='sd'?'On this test set the advantage comes from that one source.':'The advantage holds without it.'):'';
+  const cav=S.p==='sd'?'<b>Caveat.</b> Most malicious skills in this set come from one source (SkillHarm), whose payload is in a file the benchmark text does not include.':'<b>Note.</b> Skills here come from sources and structures not used for fitting.';
+  $('hero').innerHTML=`<div class="filt" style="margin:0 0 10px"><span class="lb" style="margin:0">Test set</span><div class="seg">${[['sd','Source-disjoint'],['msd','Structurally disjoint']].map(([k,l])=>`<button type="button" data-p="${k}" aria-pressed="${S.p===k}">${l}</button>`).join('')}</div></div>
+  <div class="kpis"><div class="kpi"><span>Five targeted questions</span><b>${f3(A.auc)}</b><small>AUROC ${ci(A.ci)}</small></div><div class="kpi"><span>One generic question</span><b>${f3(G.auc)}</b><small>AUROC ${ci(G.ci)}</small></div><div class="kpi"><span>Difference (paired)</span><b style="color:var(--good)">+${d.diff.toFixed(2)}</b><small>95% ${ci(d.ci)}</small></div></div>
+  <p class="interp" style="margin:0">${cav}${wo}</p>
+  <p class="interp" style="margin:6px 0 0">AUROC is the chance that a random malicious skill scores above a random benign one; 0.5 is a coin flip. Model: <code>${RAW.model}</code> hosted through OpenRouter (version unpinned), ${P().sk.length.toLocaleString()} test skills. SkillScreen, GPT-5.5 and TypeSafe numbers are published models scored by their authors: descriptive only.</p>
+  <div class="row"><button type="button" class="ghost" id="copy">Copy link to this view</button><a href="https://github.com/snehalvartak/skill-verdict-bench">Code and write-ups</a><a href="#failures">Where it fails</a></div>`;
+  $('copy').onclick=async e=>{try{await navigator.clipboard.writeText(location.href);e.target.textContent='Copied'}catch(_){e.target.textContent='Copy failed; use the address bar'}setTimeout(()=>e.target.textContent='Copy link to this view',1800)};
+  for(const b of $('hero').querySelectorAll('button[data-p]'))b.onclick=()=>setP(b.dataset.p)}
+function shStrip(){
+  const hi=P().src.indexOf('SkillHarm');if(hi<0){$('sh-strip').innerHTML='';return}
+  const m=SK().filter(s=>s[2]===hi&&s[1]),f=k=>m.filter(s=>v(s,k)!=null&&v(s,k)>=thr(k)).length;
+  const kp=(l,n)=>`<div class="kpi"><span>${l}</span><b>${n}</b><small>of ${m.length} malicious SkillHarm skills</small></div>`;
+  $('sh-strip').innerHTML=kp('Flagged by targeted max',f('max'))+kp('Flagged by targeted logreg',f('logreg'))+kp('Flagged by SkillScreen',f('skillscreen'));
+  $('sh-go').onclick=()=>{S.filt={si:hi,y:1,k:'max'};S.shown=12;heat();explorer();$('explorer').scrollIntoView({behavior:'smooth'})}}
+function paired(){
+  const rows=[['max','Max of five'],['AST04','AST04 alone'],['logreg','Logistic regression'],['ast10','Five questions in one call']],V=P().vs;
+  $('paired').innerHTML='<table class="ops"><thead><tr><th>Method minus generic question</th><th>AUROC difference</th><th>95% interval</th></tr></thead><tbody>'+rows.filter(r=>V[r[0]]).map(([k,l])=>`<tr><td>${l}</td><td>+${V[k].diff.toFixed(3)}</td><td>${ci(V[k].ci)}</td></tr>`).join('')+'</tbody></table>'}
+function meth(){
+  const rows=[['Model',`<code>${RAW.model}</code> through OpenRouter, provider pinned to Cloudflare, no fallback`],['Served version',`<code>${RAW.served}</code> (no dated version is available, so a silent change cannot be detected)`],['Not mixed with','Experiments 001 to 003 used a local Ollama copy on other skills; their numbers are not comparable'],
+   ['Questions','AST01 to AST05 (one call each), the same five in one call, and one generic question; <code>questions.json</code> holds the exact text'],['Fitting','Logistic regression on 300 training skills; thresholds chosen on 400 validation skills; test sets scored once'],
+   ['Test sets','SkillScreen\'s source-disjoint (1,384) and structurally disjoint (1,947) sets, MaliciousSkillBench revision <code>d4b42ce</code>'],['Intervals','95% bootstrap over skills; paired differences use the same resamples for both methods'],
+   ['Write-ups','<a href="https://github.com/snehalvartak/skill-verdict-bench/blob/main/docs/experiments/004-skillscreen-cohorts.md">004</a> · <a href="https://github.com/snehalvartak/skill-verdict-bench/blob/main/docs/experiments/005-full-method-set.md">005</a> · <a href="https://github.com/snehalvartak/skill-verdict-bench/tree/main/results">raw results</a>']];
+  $('meth').innerHTML=rows.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('')}
+/* ---------- state in the URL ---------- */
+const Q0=new URLSearchParams(location.search),sl2v=f=>Math.round((Math.log10(f)+2.3)/(Math.log10(.3)+2.3)*100);
+function writeURL(){const q=new URLSearchParams();if(S.p!=='sd')q.set('p',S.p);if(S.m!=='val'){q.set('m',S.m);q.set('fpr',S.fpr)}else if(S.rule!=='fpr05')q.set('rule',S.rule);const s=q.toString();try{history.replaceState(null,'',s?'?'+s:location.pathname)}catch(_){}}
+function syncSeg(){for(const b of document.querySelectorAll('button[data-p]'))b.setAttribute('aria-pressed',String(b.dataset.p===S.p));for(const b of document.querySelectorAll('button[data-m]'))b.setAttribute('aria-pressed',String(b.dataset.m===S.m))}
+function setP(p){S.p=p;S.filt=null;S.brush=null;S.pin=[];S.shown=12;syncSeg();all()}
+if(['sd','msd'].includes(Q0.get('p')))S.p=Q0.get('p');if(['val','fpr'].includes(Q0.get('m')))S.m=Q0.get('m');if(['fpr05','youden','tpr95'].includes(Q0.get('rule')))S.rule=Q0.get('rule');
+const f0=parseFloat(Q0.get('fpr'));if(f0>0&&f0<=.3)S.fpr=f0;
+try{new IntersectionObserver(e=>document.querySelector('.bar').classList.toggle('stuck',!e[0].isIntersecting)).observe($('hero'))}catch(_){document.querySelector('.bar').classList.add('stuck')}
 /* ---------- wiring ---------- */
-function all(){noharm();bar();minis();rocChart();forest();ops();heat();explorer();dumb()}
-function light(){bar();minis();rocChart();ops();heat();explorer()}   // threshold changes: figures that read it
-for(const b of $('seg-p').querySelectorAll('button'))b.onclick=()=>{S.p=b.dataset.p;S.filt=null;S.brush=null;S.pin=[];S.shown=12;for(const x of $('seg-p').querySelectorAll('button'))x.setAttribute('aria-pressed',String(x===b));all()};
-for(const b of $('seg-m').querySelectorAll('button'))b.onclick=()=>{S.m=b.dataset.m;for(const x of $('seg-m').querySelectorAll('button'))x.setAttribute('aria-pressed',String(x===b));light()};
+function all(){hero();paired();meth();noharm();shStrip();bar();minis();rocChart();forest();ops();heat();explorer();dumb();writeURL()}
+function light(){shStrip();bar();minis();rocChart();ops();heat();explorer();writeURL()}   // threshold changes: figures that read it
+for(const b of $('seg-p').querySelectorAll('button'))b.onclick=()=>setP(b.dataset.p);
+for(const b of $('seg-m').querySelectorAll('button'))b.onclick=()=>{S.m=b.dataset.m;syncSeg();light()};
 $('rule').onchange=e=>{S.rule=e.target.value;light()};
 $('fpr').oninput=e=>{S.fpr=Math.round(10**(-2.3+e.target.value/100*(Math.log10(.3)+2.3))*1000)/1000;light()};
 for(const id of ['ax','ay']){const s=$(id);for(const k of K){const o=document.createElement('option');o.value=k;o.textContent=NAME[k];s.append(o)}s.value=id==='ax'?S.ax:S.ay;s.onchange=e=>{S[id]=e.target.value;S.brush=null;S.shown=12;explorer()}}
 $('clr-brush').onclick=()=>{S.brush=null;S.shown=12;explorer()};
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>all());
-S.fpr=.05;all();
+$('rule').value=S.rule;$('fpr').value=sl2v(S.fpr);syncSeg();all();
 });</script>

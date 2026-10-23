@@ -1,14 +1,15 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>SVB Analysis Workbench</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* Layout: a left section rail and one scrolling analysis column. Each figure answers one stated question, with a reading guide beside it. */
-:root{--bg:#eef1f4;--surface:#fbfcfd;--ink:#0f1a24;--ink2:#46525e;--ink3:#6a7681;--line:#d8dee4;--grid:#e3e8ed;--accent:#0b6e7f;--ben:#5b7fa8;--mal:#d4572a;--good:#17794a;--c1:#0b6e7f;--c2:#7a8a1f;--c3:#8b5fb0;--c4:#d99a00;--c5:#cc5a8a;--c6:#8a5fb0;--band:rgba(11,110,127,.08);--font:"Instrument Sans",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d141b;--surface:#141d26;--ink:#e9eef2;--ink2:#b3bec8;--ink3:#8995a0;--line:#26323d;--grid:#1e2933;--accent:#3fb4c6;--ben:#7ea3cf;--mal:#f07a4d;--good:#4cc58a;--c1:#3fb4c6;--c2:#a9bb45;--c3:#b48ad6;--c4:#f0b429;--c5:#e682ac;--c6:#b48ad6;--band:rgba(63,180,198,.10);color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#0d141b;--surface:#141d26;--ink:#e9eef2;--ink2:#b3bec8;--ink3:#8995a0;--line:#26323d;--grid:#1e2933;--accent:#3fb4c6;--ben:#7ea3cf;--mal:#f07a4d;--good:#4cc58a;--c1:#3fb4c6;--c2:#a9bb45;--c3:#b48ad6;--c4:#f0b429;--c5:#e682ac;--c6:#b48ad6;--band:rgba(63,180,198,.10);color-scheme:dark}
-*{box-sizing:border-box}body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--font);padding-inline:16px;padding-block:0}
+:root{--bg:#eef1f4;--surface:#fbfcfd;--ink:#0f1a24;--ink2:#46525e;--ink3:#5f6b76;--line:#d8dee4;--grid:#e3e8ed;--accent:#0b6e7f;--ben:#5b7fa8;--mal:#d4572a;--good:#17794a;--c1:#0b6e7f;--c2:#66741a;--c3:#8b5fb0;--c4:#d99a00;--c5:#cc5a8a;--c6:#3f55c0;--band:rgba(11,110,127,.08);--font:"Instrument Sans",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d141b;--surface:#141d26;--ink:#e9eef2;--ink2:#b3bec8;--ink3:#8995a0;--line:#26323d;--grid:#1e2933;--accent:#3fb4c6;--ben:#7ea3cf;--mal:#f07a4d;--good:#4cc58a;--c1:#3fb4c6;--c2:#a9bb45;--c3:#b48ad6;--c4:#f0b429;--c5:#e682ac;--c6:#8c9cf0;--band:rgba(63,180,198,.10);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d141b;--surface:#141d26;--ink:#e9eef2;--ink2:#b3bec8;--ink3:#8995a0;--line:#26323d;--grid:#1e2933;--accent:#3fb4c6;--ben:#7ea3cf;--mal:#f07a4d;--good:#4cc58a;--c1:#3fb4c6;--c2:#a9bb45;--c3:#b48ad6;--c4:#f0b429;--c5:#e682ac;--c6:#8c9cf0;--band:rgba(63,180,198,.10);color-scheme:dark}
+*{box-sizing:border-box}body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--font);padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right));padding-block:0}
 .wrap{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:180px minmax(0,1fr);gap:32px;padding-block:28px 72px}
-@media(max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}.rail{display:none}}
+@media(max-width:900px){.wrap{grid-template-columns:minmax(0,1fr);gap:8px}.rail{position:static;display:flex;gap:2px 20px;overflow-x:auto;white-space:nowrap;scrollbar-width:thin}.rail b{display:none}.rail a{padding:10px 0}}
 .rail{position:sticky;top:20px;align-self:start;font-size:13px}.rail b{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
 .rail a{display:block;color:var(--ink2);text-decoration:none;padding:5px 0}.rail a:hover{color:var(--accent)}
 h1{font-size:30px;line-height:1.15;margin:0 0 8px;letter-spacing:-.015em;text-wrap:balance}
@@ -30,8 +31,8 @@ svg{display:block;width:100%;height:auto;overflow:visible}svg text{fill:var(--in
 .key{display:flex;gap:16px;font-size:12px;color:var(--ink2);margin-bottom:10px}.key i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:5px;vertical-align:-2px}
 .flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}@media(max-width:860px){.flow{grid-template-columns:minmax(0,1fr)}}
 .flow div{border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;position:relative;background:var(--surface)}.flow b{display:block;font-size:13px}.flow span{color:var(--ink3);font:11px var(--mono);display:block;margin-top:4px}.flow .fit{border-color:var(--accent)}
-.split{display:flex;height:26px;border-radius:6px;overflow:hidden;font:11px var(--mono);color:#fff;margin:6px 0 2px}.split span{display:flex;align-items:center;justify-content:center;white-space:nowrap}
-.tl{width:100%;border-collapse:collapse;font-size:13px}.tl th,.tl td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--grid);vertical-align:top}.tl th{font-size:12px;color:var(--ink3);font-weight:500}.tl td:first-child{font:500 13px var(--mono);white-space:nowrap}.tl td b{font-family:var(--mono);font-weight:500}
+.split{display:flex;height:26px;border-radius:6px;overflow:hidden;font:11px var(--mono);color:#fff;margin:6px 0 2px}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .split{color:var(--bg)}}:root[data-theme="dark"] .split{color:var(--bg)}
+.split span{display:flex;align-items:center;justify-content:center;white-space:nowrap}
 .scroll{overflow-x:auto}
 table.heat{border-collapse:separate;border-spacing:2px;font:12px var(--mono);min-width:760px;width:100%}table.heat th{font-weight:500;color:var(--ink2);text-align:left;padding:4px 6px;font-family:var(--font);font-size:12px}table.heat thead th{text-align:center;font-family:var(--mono);font-size:11px}
 table.heat .n{color:var(--ink3);font-family:var(--mono)}table.heat tr.grp th{color:var(--ink3);font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding-top:10px}
@@ -64,7 +65,27 @@ table.list{width:100%;border-collapse:collapse;font-size:12.5px}table.list th,ta
 .interp{font-size:13px;color:var(--ink2);max-width:80ch}.tlc{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:14px}.tlc>div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}.tlc .n{font:600 12px var(--mono);color:var(--accent)}.tlc h3{font-size:14px;margin:4px 0}.tlc .d{font:11px var(--mono);color:var(--ink3)}.tlc p{font-size:13px;margin:0 0 6px}
 .meth{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;font-size:13px;margin:0}.meth dt{color:var(--ink3)}.meth dd{margin:0;overflow-wrap:anywhere}.cmd{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font:12px var(--mono);overflow-x:auto}
 .bar:not(.stuck) #bar-p{display:none}
-@media (max-width:560px){.kpi b{font-size:26px}.meth{grid-template-columns:1fr}}
+@media (max-width:560px){.kpi b{font-size:26px}.meth{grid-template-columns:1fr}.kpis{grid-template-columns:1fr}.kpi{display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:baseline}.kpi span,.kpi small{grid-column:1}.kpi b{grid-column:2;grid-row:1 / span 2}}
+/* Adapt: anchors clear the sticky bar; the bar collapses to its readout on phones; touch gets 44px targets and scroll-safe chart gestures. */
+section,#hero,#explorer{scroll-margin-top:96px}
+.split span{min-width:0;overflow:hidden}
+table.heat thead th:first-child,table.heat tbody tr:not(.grp) th{position:sticky;left:0;z-index:1;background:var(--surface)}table.heat tbody tr:not(.grp) th{max-width:120px;overflow-wrap:anywhere}
+#bar-t{display:none}.selbtn{display:none}.ghost[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+#bh{touch-action:none}#rh,.mini svg{touch-action:pan-y}
+@media(max-width:700px){
+ .bar{gap:8px 12px;padding:8px 12px;max-height:calc(100svh - 24px);overflow:auto}
+ .bar .read{order:-2;flex:1 1 0!important;min-width:0!important;font-size:11px}
+ #bar-t{display:inline-flex;order:-1}
+ .bar:not(.open)>div:not(.read){display:none}.bar.open>div:not(.read){flex:1 1 100%}
+}
+@media(pointer:coarse){
+ .seg button,.ghost,#sh-go,select{min-height:44px}.seg button{padding-inline:14px}
+ .legend button{min-height:44px;padding:0 4px}
+ input[type=range]{height:44px}input[type=checkbox]{width:24px;height:24px}
+ table.list td,table.list th{padding-block:10px}table.heat td{padding-block:12px}
+ .hero a,.hero .row a{padding-block:12px}
+ .selbtn{display:inline-flex;align-items:center}#bh{touch-action:pan-y}body.sel #bh{touch-action:none}
+}
 </style>
 <div class="wrap">
 <nav class="rail" aria-label="Sections"><b>Workbench</b><a href="#hero">The finding</a><a href="#results">Does it hold</a><a href="#transfer">Threshold transfer</a><a href="#instruments">Questions</a><a href="#lineage">How we tested</a><a href="#failures">Where it fails</a><a href="#skillharm">SkillHarm</a><a href="#explorer">Skill explorer</a><a href="#method">Reproduce</a></nav>
@@ -78,7 +99,7 @@ table.list{width:100%;border-collapse:collapse;font-size:12.5px}table.list th,ta
  <div><span class="lb">Threshold</span><div class="seg" id="seg-m"><button type="button" data-m="val" aria-pressed="true">Chosen on validation</button><button type="button" data-m="fpr" aria-pressed="false">Same FPR on test</button></div></div>
  <div id="ctl-val"><label for="rule">Validation rule</label><select id="rule"><option value="fpr05">FPR ≤ 5%</option><option value="youden">Youden's J</option><option value="tpr95">TPR ≥ 95%</option></select></div>
  <div id="ctl-fpr" hidden><label for="fpr">Target false positive rate: <b id="fpr-v"></b><span class="explo">exploratory</span></label><input type="range" id="fpr" min="0" max="100" step="1" value="56"></div>
- <div class="read" id="bar-read" style="margin:0;flex:1;min-width:220px"></div>
+ <div class="read" id="bar-read" style="margin:0;flex:1;min-width:220px"></div><button type="button" class="ghost" id="bar-t" aria-expanded="false">Controls</button>
 </div>
 
 
@@ -95,7 +116,7 @@ table.list{width:100%;border-collapse:collapse;font-size:12.5px}table.list th,ta
 
 
 <section id="results"><h2>Results</h2><p class="sub">ROC with a log false-positive axis, because a screening tool works below 5%. Dots mark the current threshold on each curve.</p><p class="interp"><b>Two questions.</b> Which method ranks malicious skills above benign ones (the ROC curves and AUROC) does not depend on the threshold. What happens when you flag at a threshold (the operating-point table) does. A curve closer to the top left is better. Filled dots are this repository's runs; hollow ones are SkillScreen's published models, scored by their authors, so descriptive only.</p>
-<div class="two"><div class="fig"><p class="why"><b>Why interactive</b>The curves cross. Which method wins depends on the false positive rate you can afford, so you read all of them at one rate.</p><div class="legend" id="legend"></div><div id="roc"></div><div class="read" id="roc-read">Hover or use the arrow keys on the chart to read every method at one false positive rate.</div></div>
+<div class="two"><div class="fig"><p class="why"><b>Why interactive</b>The curves cross. Which method wins depends on the false positive rate you can afford, so you read all of them at one rate.</p><div class="legend" id="legend"></div><div id="roc"></div><div class="read" id="roc-read">Hover, touch and drag, or use the arrow keys on the chart to read every method at one false positive rate.</div></div>
 <div class="fig"><h3>AUROC with 95% intervals</h3><div id="forest"></div><div class="guide"><ul><li>Filled dot: this experiment's model, with interval.</li><li>Hollow dot: SkillScreen's published models, scored by their authors, so descriptive only.</li></ul></div></div></div>
 <div class="fig scroll" style="margin-top:14px"><h3>Operating point <span class="explo" id="ops-flag" hidden>exploratory</span></h3><p class="why"><b>Why interactive</b>Reads the same threshold as every other figure, so the numbers in this table are the ones behind the dots, panels and heat map.</p><div id="ops"></div></div><div class="fig scroll" style="margin-top:14px"><h3>Paired difference from the generic question</h3><p class="why"><b>Why it is here</b>Both methods are scored on the same skills, so the interval is on the difference itself, not on two overlapping intervals.</p><div id="paired"></div></div></section>
 
@@ -104,7 +125,7 @@ table.list{width:100%;border-collapse:collapse;font-size:12.5px}table.list th,ta
 
 <section id="instruments"><h2>How each question behaves</h2><p class="sub">Score distributions for malicious and benign skills. The dashed line is the current threshold: orange to its left is a missed malicious skill, blue to its right is a false alarm.</p><p class="interp"><b>How to read it.</b> Orange mass left of the dashed line is malicious skills the question misses at this threshold; blue mass to its right is false alarms.</p>
 <div class="fig"><p class="why"><b>Why interactive</b>The threshold is the decision. Moving it shows what each question gives up, and the readouts update with it.</p>
-<div class="key"><span><i style="background:var(--mal)"></i>Malicious</span><span><i style="background:var(--ben)"></i>Benign</span><span>x: score, log scale · y: share of class · hover a panel for bin counts</span></div>
+<div class="key"><span><i style="background:var(--mal)"></i>Malicious</span><span><i style="background:var(--ben)"></i>Benign</span><span>x: score, log scale · y: share of class · hover or touch a panel for bin counts</span></div>
 <div class="mini-grid" id="minis"></div></div></section>
 
 <section id="lineage"><h2>How we tested it: five experiments</h2><p class="sub">Each experiment exists because the previous one left a question open.</p><div class="tlc"><div><b class="n">001</b><h3>Do per-risk questions beat one generic question?</h3><p class="d">200 skills, random split</p><p><b>0.80</b> AUC for the five questions against <b>0.63</b> for the generic one</p></div><div><b class="n">002</b><h3>Is it the content, the max of five, or batching?</h3><p class="d">Same 200 skills</p><p>AST10 content <b>+0.12</b> over generic paraphrases; max-of-five <b>+0.045</b>; batching no change</p></div><div><b class="n">003</b><h3>Do those hold when the threshold is chosen on separate data?</h3><p class="d">200 train · 200 val · 200 test</p><p>Logistic regression <b>+0.057</b> over the max; AST04 alone <b>+0.076</b> over the max</p></div><div><b class="n">004</b><h3>Do they hold on sources never seen in training?</h3><p class="d">1,384 source-disjoint · 1,947 structurally disjoint</p><p>Logreg minus generic <b>+0.139</b> [0.105, 0.172] and <b>+0.129</b> [0.105, 0.152]</p></div><div><b class="n">005</b><h3>Does 004 reproduce, and is five separate calls better than the same five questions in one?</h3><p class="d">Same test skills as 004</p><p>Scores identical to 004 (Spearman 1.000, largest difference 0). Five calls: AUROC <b>0.672</b>; one call: <b>0.656</b></p></div></div></section>
@@ -128,7 +149,7 @@ table.list{width:100%;border-collapse:collapse;font-size:12.5px}table.list th,ta
 
 <section id="explorer"><h2>Skill explorer</h2><p class="sub">Disagreement between two methods is where the information is. Pick any pair, then drag a box to select skills.</p><p class="interp"><b>How to read it.</b> Skills in the off-diagonal quadrants are ones the two methods disagree on. That is where to look for what each method sees or misses.</p>
 <div class="two"><div class="fig"><p class="why"><b>Why interactive</b>Which pair is informative depends on the question: a check against the generic question, or ours against SkillScreen. Brushing turns a region into a list of skills.</p>
-<div class="filt"><label for="ax" class="lb" style="margin:0">X</label><select id="ax"></select><label for="ay" class="lb" style="margin:0">Y</label><select id="ay"></select><button type="button" class="ghost" id="clr-brush">Clear box</button></div>
+<div class="filt"><label for="ax" class="lb" style="margin:0">X</label><select id="ax"></select><label for="ay" class="lb" style="margin:0">Y</label><select id="ay"></select><button type="button" class="ghost" id="clr-brush">Clear box</button><button type="button" class="ghost selbtn" id="sel-box" aria-pressed="false">Draw box</button></div>
 <div class="key"><span><i style="background:var(--mal)"></i>Malicious</span><span><i style="background:var(--ben)"></i>Benign</span><span>dashed lines: flag thresholds</span></div><div id="scatter"></div><div class="quad" id="quad"></div></div>
 <div class="fig"><h3>Skills in view</h3><div class="filt" id="filt"></div><div id="list" class="scroll"></div></div></div>
 <div class="fig scroll" style="margin-top:14px"><h3>One skill, each experiment side by side</h3><p class="why"><b>Why interactive</b>A comparison needs the same skill scored by each run. Pick a skill from the list or the chart and read what each experiment and each question said about it.</p><div id="cmp"></div></div></section>
@@ -163,7 +184,6 @@ function thr(k){
   if(S.m==='fpr'){const b=benignDesc(k),n=Math.floor(S.fpr*b.length);return n>=b.length?-1:b[n]+1e-9}
   const T=P().th;return T[k]?T[k][S.rule]:CHECKS.includes(k)?T.max[S.rule]:.5}
 function stats(k,t=thr(k)){let tp=0,fp=0,tn=0,fn=0,un=0;for(const s of SK()){const x=v(s,k);if(x==null){un++;continue}const f=x>=t;s[1]?(f?tp++:fn++):(f?fp++:tn++)}return{tp,fp,tn,fn,un,tpr:tp/(tp+fn),fpr:fp/(fp+tn),prec:tp+fp?tp/(tp+fp):null}}
-const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const NS='http://www.w3.org/2000/svg';
 function svgEl(w,h,label){const s=document.createElementNS(NS,'svg');s.setAttribute('viewBox',`0 0 ${w} ${h}`);s.setAttribute('role','img');s.setAttribute('aria-label',label);return s}
 
@@ -194,7 +214,7 @@ function minis(){
     const read=document.createElement('div');read.className='read';
     const base=()=>{read.innerHTML=`Flags <b>${pc(st.tpr)}</b> of malicious, <b>${pc(st.fpr)}</b> of benign`};base();
     const at=e=>{const r=svg.getBoundingClientRect(),i=Math.max(0,Math.min(nb-1,Math.floor(((e.clientX-r.left)*w/r.width-L)/bw))),a=10**(lo+i*3/nb),b=10**(lo+(i+1)*3/nb);read.innerHTML=`Scores ${a.toFixed(3)} to ${b.toFixed(3)}: <b>${cnt[1][i]}</b> malicious, <b>${cnt[0][i]}</b> benign`};
-    svg.addEventListener('pointermove',at);svg.addEventListener('pointerleave',base);
+    svg.addEventListener('pointermove',at);svg.addEventListener('pointerdown',at);svg.addEventListener('pointerleave',e=>{if(e.pointerType!=='touch')base()});
     const p=document.createElement('p');p.textContent=QT[k]||'';p.style.cssText='font-size:12px;color:var(--ink3);margin:6px 0 0';
     fig.append(svg,read,p);box.append(fig)}
 }
@@ -217,7 +237,7 @@ function rocChart(){
     rx.setAttribute('x1',X(fx));rx.setAttribute('x2',X(fx));rx.setAttribute('visibility','visible');
     rd.innerHTML=`At false positive rate <b>${pc(fx)}</b>: `+shown.map(([k])=>[k,tprAt(roc(k),fx)]).sort((a,b)=>b[1]-a[1]).map(([k,t])=>`${NAME[k]} <b>${pc(t)}</b>`).join(' · ')};
   const fe=e=>{const r=svg.getBoundingClientRect();return Math.min(1,Math.max(.001,10**(lo+((e.clientX-r.left)*w/r.width-L)/W*3)))};
-  svg.querySelector('#rh').addEventListener('pointermove',e=>show(fe(e)));svg.addEventListener('pointerleave',()=>show(null));
+  svg.querySelector('#rh').addEventListener('pointermove',e=>show(fe(e)));svg.querySelector('#rh').addEventListener('pointerdown',e=>show(fe(e)));svg.addEventListener('pointerleave',e=>{if(e.pointerType!=='touch')show(null)});
   svg.addEventListener('keydown',e=>{if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;e.preventDefault();const c=Math.log10(S.roc??.05)+(e.key==='ArrowRight'?.08:-.08);show(Math.min(1,Math.max(.001,10**c)))});
 }
 function forest(){
@@ -243,7 +263,7 @@ function heat(){
       o+=`<td data-si="${si}" data-y="${y}" data-k="${k}" style="--v:${f.toFixed(2)}" class="${good>=.7?'gd':good<=.3?'bd':''}${on?' on':''}" tabindex="0" role="button" aria-label="${nm} ${y?'malicious':'benign'}, ${NAME[k]}: ${pc(f)} flagged. Show these skills">${(100*f).toFixed(0)}%</td>`}
     o+='</tr>'}
   const box=$('heat');box.innerHTML=o+'</tbody></table>';
-  box.onclick=e=>{const c=e.target.closest('td[data-k]');if(!c)return;S.filt={si:+c.dataset.si,y:+c.dataset.y,k:c.dataset.k};S.shown=12;heat();explorer();$('explorer').scrollIntoView({behavior:'smooth'})};
+  box.onclick=e=>{const c=e.target.closest('td[data-k]');if(!c)return;S.filt={si:+c.dataset.si,y:+c.dataset.y,k:c.dataset.k};S.shown=12;heat();explorer();$('explorer').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'})};
   box.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.target.click()}}}
 /* ---------- explorer ---------- */
 function inFilt(s){return !S.filt||(s[2]===S.filt.si&&s[1]===S.filt.y)}
@@ -252,16 +272,18 @@ function explorer(){scatter();list();compare()}
 function scatter(){
   const w=520,h=420,L=44,R=10,T0=10,B=38,W=w-L-R,Hh=h-T0-B,X=a=>L+a*W,Y=a=>T0+(1-a)*Hh,svg=svgEl(w,h,`${NAME[S.ax]} against ${NAME[S.ay]}`);let o='';
   for(const t of [0,.5,1])o+=`<line x1="${L}" x2="${L+W}" y1="${Y(t)}" y2="${Y(t)}" class="grid"/><text x="${L-6}" y="${Y(t)+4}" text-anchor="end">${t}</text><text x="${X(t)}" y="${h-20}" text-anchor="middle">${t}</text>`;
-  const tx=thr(S.ax),ty=thr(S.ay);o+=`<line x1="${X(tx)}" x2="${X(tx)}" y1="${T0}" y2="${T0+Hh}" class="thr"/><line x1="${L}" x2="${L+W}" y1="${Y(ty)}" y2="${Y(ty)}" class="thr"/>`;
+  const tx=thr(S.ax),ty=thr(S.ay);o+=`<line x1="${X(tx)}" x2="${X(tx)}" y1="${T0}" y2="${T0+Hh}" class="thr" id="sx"/><line x1="${L}" x2="${L+W}" y1="${Y(ty)}" y2="${Y(ty)}" class="thr" id="sy"/>`;
   const pts=SK().filter(s=>v(s,S.ax)!=null&&v(s,S.ay)!=null);
   for(const s of [...pts].sort((a,b)=>a[1]-b[1])){const dim=!inFilt(s);o+=`<circle cx="${X(v(s,S.ax)).toFixed(1)}" cy="${Y(v(s,S.ay)).toFixed(1)}" r="2.2" class="${s[1]?'mal':'ben'}-dot"${dim?' style="opacity:.08"':''}/>`}
   o+=`<text x="${L+W/2}" y="${h-4}" text-anchor="middle" class="lbl">${NAME[S.ax]} score</text><text transform="rotate(-90 12 ${T0+Hh/2})" x="12" y="${T0+Hh/2}" text-anchor="middle" class="lbl">${NAME[S.ay]} score</text>`;
   const b=S.brush;if(b)o+=`<rect x="${X(b[0])}" y="${Y(b[3])}" width="${X(b[2])-X(b[0])}" height="${Y(b[1])-Y(b[3])}" class="brush"/>`;
-  o+=`<rect id="bh" x="${L}" y="${T0}" width="${W}" height="${Hh}" fill="transparent" style="cursor:crosshair;touch-action:none"/>`;
+  o+=`<rect id="bh" x="${L}" y="${T0}" width="${W}" height="${Hh}" fill="transparent" style="cursor:crosshair"/>`;
   svg.innerHTML=o;$('scatter').replaceChildren(svg);
+  svg.moveThr=()=>{const x=X(thr(S.ax)),y=Y(thr(S.ay)),a=svg.querySelector('#sx'),b=svg.querySelector('#sy');a.setAttribute('x1',x);a.setAttribute('x2',x);b.setAttribute('y1',y);b.setAttribute('y2',y);quad()};   // dots do not depend on the threshold, so a threshold change moves two lines instead of redrawing them
   const inv=e=>{const r=svg.getBoundingClientRect(),cx=(e.clientX-r.left)*w/r.width,cy=(e.clientY-r.top)*h/r.height;return[Math.min(1,Math.max(0,(cx-L)/W)),Math.min(1,Math.max(0,1-(cy-T0)/Hh))]};
   let a0=null;const h0=svg.querySelector('#bh');
-  h0.addEventListener('pointerdown',e=>{a0=inv(e);S.brush=null;h0.setPointerCapture(e.pointerId)});
+  for(const t of ['pointercancel','lostpointercapture'])h0.addEventListener(t,()=>{a0=null});
+  h0.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&!document.body.classList.contains('sel'))return;a0=inv(e);S.brush=null;h0.setPointerCapture(e.pointerId)});
   h0.addEventListener('pointermove',e=>{if(!a0)return;const c=inv(e);S.brush=[Math.min(a0[0],c[0]),Math.min(a0[1],c[1]),Math.max(a0[0],c[0]),Math.max(a0[1],c[1])];const r=svg.querySelector('.brush')||svg.insertBefore(Object.assign(document.createElementNS(NS,'rect'),{}),h0);r.setAttribute('class','brush');r.setAttribute('x',X(S.brush[0]));r.setAttribute('y',Y(S.brush[3]));r.setAttribute('width',X(S.brush[2])-X(S.brush[0]));r.setAttribute('height',Y(S.brush[1])-Y(S.brush[3]))});
   h0.addEventListener('pointerup',e=>{if(!a0)return;const c=inv(e);a0=null;if(S.brush&&Math.abs(S.brush[2]-S.brush[0])<.005&&Math.abs(S.brush[3]-S.brush[1])<.005)S.brush=null;S.shown=12;explorer()});
   quad()}
@@ -305,10 +327,9 @@ function dumb(){
   svg.innerHTML=o;$('dumb').replaceChildren(svg)}
 function noharm(){
   const H='SkillHarm',hi=P().src.indexOf(H),rows=SK(),rest=rows.filter(s=>s[2]!==hi),np=r=>r.filter(s=>s[1]).length,nn=r=>r.filter(s=>!s[1]).length;
-  const au=(r,k)=>{const a=r.filter(s=>v(s,k)!=null),pos=a.filter(s=>s[1]).map(s=>v(s,k)),neg=a.filter(s=>!s[1]).map(s=>v(s,k));let w=0;for(const x of pos)for(const y of neg)w+=x>y?1:x===y?.5:0;return w/(pos.length*neg.length)};
   if(hi<0||!np(rows.filter(s=>s[2]===hi))){$('noharm').innerHTML='<p class="empty">This test set has no SkillHarm skills.</p>';return}
   let o=`<table class="ops"><thead><tr><th>Method</th><th>All skills (${np(rows)} malicious, ${nn(rows)} benign)</th><th>Without SkillHarm (${np(rest)} malicious, ${nn(rest)} benign)</th></tr></thead><tbody>`;
-  for(const k of ['max','logreg','ast10','generic','skillscreen','gpt55','typesafe'])o+=`<tr><td>${NAME[k]}</td><td>${f3(au(rows,k))}</td><td>${f3(au(rest,k))}</td></tr>`;
+  for(const k of ['max','logreg','ast10','generic','skillscreen','gpt55','typesafe'])o+=`<tr><td>${NAME[k]}</td><td>${f3(auRows(rows,k))}</td><td>${f3(auRows(rest,k))}</td></tr>`;
   $('noharm').innerHTML=o+'</tbody></table><p class="sub" style="margin-top:8px">'+(S.p==='sd'?'On the source-disjoint set the generic question is level with the targeted questions once SkillHarm is removed, so the advantage of the five questions in the headline AUROC comes from that one source. ':'SkillHarm is a small share of this test set, so removing it changes little. ')+'Point estimates without intervals. The remaining malicious set is small, and the benign skills come from few sources, so differences in style between sources can make the remaining task easier than it would be in practice.</p>'}
 
 /* ---------- hero, case study, method, paired ---------- */
@@ -330,7 +351,7 @@ function shStrip(){
   const m=SK().filter(s=>s[2]===hi&&s[1]),f=k=>m.filter(s=>v(s,k)!=null&&v(s,k)>=thr(k)).length;
   const kp=(l,n)=>`<div class="kpi"><span>${l}</span><b>${n}</b><small>of ${m.length} malicious SkillHarm skills</small></div>`;
   $('sh-strip').innerHTML=kp('Flagged by targeted max',f('max'))+kp('Flagged by targeted logreg',f('logreg'))+kp('Flagged by SkillScreen',f('skillscreen'));
-  $('sh-go').onclick=()=>{S.filt={si:hi,y:1,k:'max'};S.shown=12;heat();explorer();$('explorer').scrollIntoView({behavior:'smooth'})}}
+  $('sh-go').onclick=()=>{S.filt={si:hi,y:1,k:'max'};S.shown=12;heat();explorer();$('explorer').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'})}}
 function paired(){
   const rows=[['max','Max of five'],['AST04','AST04 alone'],['logreg','Logistic regression'],['ast10','Five questions in one call']],V=P().vs;
   $('paired').innerHTML='<table class="ops"><thead><tr><th>Method minus generic question</th><th>AUROC difference</th><th>95% interval</th></tr></thead><tbody>'+rows.filter(r=>V[r[0]]).map(([k,l])=>`<tr><td>${l}</td><td>+${V[k].diff.toFixed(3)}</td><td>${ci(V[k].ci)}</td></tr>`).join('')+'</tbody></table>'}
@@ -350,13 +371,16 @@ const f0=parseFloat(Q0.get('fpr'));if(f0>0&&f0<=.3)S.fpr=f0;
 try{new IntersectionObserver(e=>document.querySelector('.bar').classList.toggle('stuck',!e[0].isIntersecting)).observe($('hero'))}catch(_){document.querySelector('.bar').classList.add('stuck')}
 /* ---------- wiring ---------- */
 function all(){hero();paired();meth();noharm();shStrip();bar();minis();rocChart();forest();ops();heat();explorer();dumb();writeURL()}
-function light(){shStrip();bar();minis();rocChart();ops();heat();explorer();writeURL()}   // threshold changes: figures that read it
+function light(){shStrip();bar();minis();rocChart();ops();heat();const sv=$('scatter').firstChild;sv&&sv.moveThr?sv.moveThr():scatter();compare();writeURL()}   // threshold changes: figures that read it
 for(const b of $('seg-p').querySelectorAll('button'))b.onclick=()=>setP(b.dataset.p);
 for(const b of $('seg-m').querySelectorAll('button'))b.onclick=()=>{S.m=b.dataset.m;syncSeg();light()};
 $('rule').onchange=e=>{S.rule=e.target.value;light()};
-$('fpr').oninput=e=>{S.fpr=Math.round(10**(-2.3+e.target.value/100*(Math.log10(.3)+2.3))*1000)/1000;light()};
+let lq=0;const lightSoon=()=>lq||(lq=requestAnimationFrame(()=>{lq=0;light()}));   // at most one redraw per frame while the slider moves
+$('fpr').oninput=e=>{S.fpr=Math.round(10**(-2.3+e.target.value/100*(Math.log10(.3)+2.3))*1000)/1000;lightSoon()};
 for(const id of ['ax','ay']){const s=$(id);for(const k of K){const o=document.createElement('option');o.value=k;o.textContent=NAME[k];s.append(o)}s.value=id==='ax'?S.ax:S.ay;s.onchange=e=>{S[id]=e.target.value;S.brush=null;S.shown=12;explorer()}}
 $('clr-brush').onclick=()=>{S.brush=null;S.shown=12;explorer()};
+$('sel-box').onclick=e=>e.currentTarget.setAttribute('aria-pressed',String(document.body.classList.toggle('sel')));
+$('bar-t').onclick=e=>{const o=document.querySelector('.bar').classList.toggle('open'),b=e.currentTarget;b.setAttribute('aria-expanded',String(o));b.textContent=o?'Done':'Controls'};
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>all());
 $('rule').value=S.rule;$('fpr').value=sl2v(S.fpr);syncSeg();all();
-});</script>
+}).catch(e=>document.querySelector('main').insertAdjacentHTML('afterbegin',`<p class="empty" role="alert">The dashboard could not load or draw (${String(e.message||e).replace(/</g,'&lt;')}). Reload, or check that data.json and questions.json are served next to this page.</p>`));</script>

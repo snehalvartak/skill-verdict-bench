@@ -1,6 +1,7 @@
 """Build site/data.json for the experiment 005 dashboard.
 
 python scripts/build_dashboard.py [--results results/exp005] [--skillscreen ../SkillScreen] [--out site/data.json]
+python scripts/build_dashboard.py --add-no-harm [--out site/data.json]   # only add the without-SkillHarm intervals to an existing file
 
 Per test skill: label, source, our scores (generic-1q, the five checks, and the max, AST04 and logreg combiners)
 and three SkillScreen methods for comparison. Thresholds and intervals come from the held-out JSON. No skill text.
@@ -9,6 +10,7 @@ import argparse, json, math, pathlib, sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from svb.checks import CHECKS as CHECKS_Q, GENERIC, GENERIC5
+from svb.score import auc, auc_diff_ci
 from svb.skillscreen import GATE, read_scores, sources
 
 CHECKS = ["AST01", "AST02", "AST03", "AST04", "AST05"]
@@ -18,6 +20,19 @@ THEIRS = {"skillscreen": None, "gpt55": "judge-gpt-5.5", "typesafe": "typesafe"}
 
 def _r(x):  # 6 significant digits: rounding near-1.0 probabilities to fixed decimals would create ties and move AUROC
     return None if x is None else float(f"{x:.6g}")
+
+def no_harm(skills, source="SkillHarm", n_boot=2000, seed=0):
+    """Method minus generic AUROC on the skills left once one source is removed, with the held-out results' paired bootstrap
+    (2,000 resamples by skill, seed 0). Exploratory: chosen after the full-set results were seen."""
+    rest = [s for s in skills if s["src"] != source]
+    if len(rest) == len(skills):
+        return None
+    rows = lambda k: [{"benchmark_id": s["id"], "label": s["y"], "scores": {"s": s["s"].get(k)}} for s in rest]
+    g, out = rows("generic"), {}
+    for k in ("max", "AST04", "logreg", "ast10"):
+        m = rows(k)
+        out[k] = {"auc": auc(m), "generic": auc(g), "diff": auc(m) - auc(g), "ci": list(auc_diff_ci(m, g, n_boot, seed))}
+    return {"source": source, "n": len(rest), "n_malicious": sum(s["y"] for s in rest), "vs_generic": out}
 
 def protocol(res, ss, p, src, old):
     held = json.loads((res / f"{p}-heldout.json").read_text())
@@ -54,7 +69,8 @@ def protocol(res, ss, p, src, old):
     auc = {k: {"auc": res_[v]["auc"], "ci": res_[v]["auc_ci"]} for k, v in ours.items()}
     vs = {k: res_[v]["vs_baseline"] for k, v in ours.items() if "vs_baseline" in res_[v]}
     held_ = {k: res_[v]["rules"]["fpr05"] for k, v in ours.items()}
-    return {"split": SPLIT[p], "held": held_, "weights": w, "thresholds": thresholds, "auc": auc, "vs_generic": vs, "skills": skills}
+    return {"split": SPLIT[p], "held": held_, "weights": w, "thresholds": thresholds, "auc": auc, "vs_generic": vs, "skills": skills,
+            "no_harm": no_harm(skills)}
 
 def _qs(d):
     return [{"id": k, "text": v[0], "yes": v[1]["true"], "no": v[1]["false"]} for k, v in d.items()]
@@ -82,7 +98,15 @@ def main():
     a.add_argument("--results", default="results/exp005")
     a.add_argument("--skillscreen", default="../SkillScreen")
     a.add_argument("--out", default="site/data.json")
+    a.add_argument("--add-no-harm", action="store_true", help="only add the without-SkillHarm intervals to an existing --out file")
     a = a.parse_args()
+    if a.add_no_harm:
+        out = pathlib.Path(a.out)
+        data = json.loads(out.read_text())
+        for P in data["protocols"].values():
+            P["no_harm"] = no_harm(P["skills"])
+        out.write_text(json.dumps(data, separators=(",", ":")))
+        return print(out, {p: v["no_harm"] and v["no_harm"]["n"] for p, v in data["protocols"].items()})
     res, ss = pathlib.Path(a.results), pathlib.Path(a.skillscreen)
     old = res.with_name("exp004")
     src = sources(ss)

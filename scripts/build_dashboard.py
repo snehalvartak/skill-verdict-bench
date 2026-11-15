@@ -2,6 +2,7 @@
 
 python scripts/build_dashboard.py [--results results/exp005] [--skillscreen ../SkillScreen] [--out site/data.json]
 python scripts/build_dashboard.py --add-no-harm [--out site/data.json]   # only add the without-SkillHarm intervals to an existing file
+python scripts/build_dashboard.py --add-composition [--results results/exp005] [--out site/data.json]   # only add the class counts per part
 
 Per test skill: label, source, our scores (generic-1q, the five checks, and the max, AST04 and logreg combiners)
 and three SkillScreen methods for comparison. Thresholds and intervals come from the held-out JSON. No skill text.
@@ -33,6 +34,17 @@ def no_harm(skills, source="SkillHarm", n_boot=2000, seed=0):
         m = rows(k)
         out[k] = {"auc": auc(m), "generic": auc(g), "diff": auc(m) - auc(g), "ci": list(auc_diff_ci(m, g, n_boot, seed))}
     return {"source": source, "n": len(rest), "n_malicious": sum(s["y"] for s in rest), "vs_generic": out}
+
+def composition(res, p):
+    """[malicious, benign] skill counts for each part of a protocol, from the saved predictions."""
+    out = {}
+    for part in ("train", "validation", "test"):
+        labels = {}
+        for line in (res / f"{p}-{part}" / "predictions.jsonl").read_text().splitlines():
+            r = json.loads(line)
+            labels[r["benchmark_id"]] = r["label"]
+        out[part] = [sum(labels.values()), len(labels) - sum(labels.values())]
+    return out
 
 def protocol(res, ss, p, src, old):
     held = json.loads((res / f"{p}-heldout.json").read_text())
@@ -70,7 +82,7 @@ def protocol(res, ss, p, src, old):
     vs = {k: res_[v]["vs_baseline"] for k, v in ours.items() if "vs_baseline" in res_[v]}
     held_ = {k: res_[v]["rules"]["fpr05"] for k, v in ours.items()}
     return {"split": SPLIT[p], "held": held_, "weights": w, "thresholds": thresholds, "auc": auc, "vs_generic": vs, "skills": skills,
-            "no_harm": no_harm(skills)}
+            "no_harm": no_harm(skills), "comp": composition(res, p)}
 
 def _qs(d):
     return [{"id": k, "text": v[0], "yes": v[1]["true"], "no": v[1]["false"]} for k, v in d.items()]
@@ -98,6 +110,7 @@ def main():
     a.add_argument("--results", default="results/exp005")
     a.add_argument("--skillscreen", default="../SkillScreen")
     a.add_argument("--out", default="site/data.json")
+    a.add_argument("--add-composition", action="store_true", help="only add the malicious/benign counts per part to an existing --out file")
     a.add_argument("--add-no-harm", action="store_true", help="only add the without-SkillHarm intervals to an existing --out file")
     a = a.parse_args()
     if a.add_no_harm:
@@ -107,6 +120,13 @@ def main():
             P["no_harm"] = no_harm(P["skills"])
         out.write_text(json.dumps(data, separators=(",", ":")))
         return print(out, {p: v["no_harm"] and v["no_harm"]["n"] for p, v in data["protocols"].items()})
+    if a.add_composition:
+        out = pathlib.Path(a.out)
+        data = json.loads(out.read_text())
+        for p, P in data["protocols"].items():
+            P["comp"] = composition(pathlib.Path(a.results), p)
+        out.write_text(json.dumps(data, separators=(",", ":")))
+        return print(out, {p: v["comp"] for p, v in data["protocols"].items()})
     res, ss = pathlib.Path(a.results), pathlib.Path(a.skillscreen)
     old = res.with_name("exp004")
     src = sources(ss)

@@ -19,3 +19,12 @@ def test_no_harm_drops_the_source_and_pairs_the_rest():
 
 def test_no_harm_is_none_when_the_source_is_absent():
     assert bd.no_harm([skill("a", 1, "X", generic=.5)], n_boot=10) is None
+
+def test_composition_counts_each_skill_once_per_part(tmp_path):
+    import json
+    for part, labels in {"train": [1, 1, 0], "validation": [1, 0], "test": [0, 0, 1]}.items():
+        d = tmp_path / f"sd-{part}"; d.mkdir()
+        # two methods per skill, as in a real run: a skill must not be counted twice
+        (d / "predictions.jsonl").write_text("\n".join(json.dumps({"benchmark_id": f"{i}", "label": y, "method": m})
+                                                       for i, y in enumerate(labels) for m in ("a", "b")))
+    assert bd.composition(tmp_path, "sd") == {"train": [2, 1], "validation": [1, 1], "test": [1, 2]}

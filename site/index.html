@@ -44,6 +44,9 @@ table.cmp .q{min-width:240px;max-width:300px}table.cmp .q small{display:block;co
 .m{height:5px;border-radius:3px;background:var(--grid);margin-top:5px;overflow:hidden}.m i{display:block;height:100%;background:var(--ink3)}.m i.on{background:var(--mal)}table.cmp tr.g td{background:var(--grid)}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.chip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--ink2);background:var(--surface)}.chip b{color:var(--ink);font-weight:600}
 a{color:var(--accent)}
+#ap table.ops,#cal-t table.ops,#comp table.ops{min-width:0}
+abbr[title]{text-decoration:underline dotted;text-underline-offset:3px;cursor:help}
+details.gl{margin-top:10px}details.gl summary{cursor:pointer;font-weight:600;font-size:14px}details.gl dl{margin:8px 0 0;display:grid;grid-template-columns:minmax(120px,max-content) minmax(0,1fr);gap:6px 16px;font-size:13px}details.gl dt{font-weight:600}details.gl dd{margin:0;color:var(--ink2)}@media(max-width:600px){details.gl dl{grid-template-columns:minmax(0,1fr)}details.gl dd{margin-bottom:6px}}
 
 .bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;margin-top:16px;box-shadow:0 4px 14px rgba(0,0,0,.06)}
 .bar label,.bar .lb{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);display:block;margin-bottom:3px}
@@ -88,11 +91,28 @@ table.heat thead th:first-child,table.heat tbody tr:not(.grp) th{position:sticky
 }
 </style>
 <div class="wrap">
-<nav class="rail" aria-label="Sections"><b>Workbench</b><a href="#hero">The finding</a><a href="#results">Does it hold</a><a href="#transfer">Threshold transfer</a><a href="#instruments">Questions</a><a href="#lineage">How we tested</a><a href="#failures">Where it fails</a><a href="#skillharm">SkillHarm</a><a href="#explorer">Skill explorer</a><a href="#method">Reproduce</a></nav>
+<nav class="rail" aria-label="Sections"><b>Workbench</b><a href="#hero">The finding</a><a href="#results">Does it hold</a><a href="#prevalence">Precision and calibration</a><a href="#transfer">Threshold transfer</a><a href="#instruments">Questions</a><a href="#lineage">How we tested</a><a href="#failures">Where it fails</a><a href="#skillharm">SkillHarm</a><a href="#explorer">Skill explorer</a><a href="#method">Reproduce</a></nav>
 <main>
 <header><span class="tag">Experiments 001 to 005 · real data</span>
 <h1>Do five targeted questions find malicious agent skills better than one generic question?</h1>
-<div class="fig hero" id="hero"></div></header>
+<p class="sub" style="max-width:70ch">For anyone deciding whether a language model can screen agent skills (the <code>SKILL.md</code> files that tell a coding agent what to do) for malicious behaviour before they are installed. No background in the evaluation method is assumed; the terms are defined below.</p>
+<div class="fig hero" id="hero"></div>
+<details class="fig gl" id="glossary"><summary>Glossary: the terms used on this page</summary><dl>
+<dt>Skill, <code>SKILL.md</code></dt><dd>A text file of instructions an agent follows. This is the only part of a skill the model reads; files it points to are not in the data.</dd>
+<dt>Malicious, benign</dt><dd>The benchmark's label for each skill. We never relabel.</dd>
+<dt>Five questions (AST01 to AST05)</dt><dd>One yes/no question per checkable risk from the OWASP Agentic Skills Top 10. The model returns the probability that the answer is yes, so each skill gets five scores between 0 and 1.</dd>
+<dt>Generic question</dt><dd>The baseline: one question, "is this skill malicious?", asked of the same model.</dd>
+<dt>Targeted max</dt><dd>A skill's score is the highest of its five scores.</dd>
+<dt>Targeted logreg</dt><dd>A skill's score is a weighted sum of the five scores squashed to 0 to 1 (logistic regression). The weights were fitted once, on 300 labelled training skills, with no regularisation, and then frozen.</dd>
+<dt>Targeted, one call</dt><dd>The same five questions asked in a single model call instead of five.</dd>
+<dt>Threshold</dt><dd>Flag a skill when its score is at or above this value. Chosen on separate validation skills by one of three rules: Youden's J (best recall minus false positive rate), TPR ≥ 95% (catch at least 95% of malicious skills), or FPR ≤ 5% (flag at most 5% of benign skills).</dd>
+<dt>Recall, false positive rate, precision</dt><dd>Recall: share of malicious skills flagged. False positive rate (FPR): share of benign skills flagged. Precision: share of flagged skills that are malicious.</dd>
+<dt>ROC, AUROC</dt><dd>The ROC curve plots recall against FPR across every threshold. AUROC is the area under it: the chance that a random malicious skill scores above a random benign one (0.5 is chance, 1.0 is perfect). It does not depend on a threshold.</dd>
+<dt>Prevalence</dt><dd>The share of skills that are malicious. Recall and FPR do not depend on it; precision does.</dd>
+<dt>Source-disjoint, structurally disjoint</dt><dd>SkillScreen's two test sets. Source-disjoint skills come from sources never used for training or validation. Structurally disjoint skills share no template structure with them.</dd>
+<dt>SkillHarm</dt><dd>One source that supplies most of the source-disjoint malicious skills. See the case study.</dd>
+<dt>Calibration</dt><dd>Whether a score of 0.3 means about 30% of such skills are malicious.</dd>
+</dl></details></header>
 
 <div class="bar" role="group" aria-label="Global controls">
  <div id="bar-p"><span class="lb">Test set</span><div class="seg" id="seg-p"><button type="button" data-p="sd" aria-pressed="true">Source-disjoint</button><button type="button" data-p="msd" aria-pressed="false">Structurally disjoint</button></div></div>
@@ -120,8 +140,15 @@ table.heat thead th:first-child,table.heat tbody tr:not(.grp) th{position:sticky
 <div class="fig"><h3>AUROC with 95% intervals</h3><div id="forest"></div><div class="guide"><ul><li>Filled dot: this experiment's model, with interval.</li><li>Hollow dot: SkillScreen's published models, scored by their authors, so descriptive only.</li></ul></div></div></div>
 <div class="fig scroll" style="margin-top:14px"><h3 style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>Operating point <span class="explo" id="ops-flag" hidden>exploratory</span></span><button type="button" class="ghost" id="csv-ops">Download CSV</button></h3><p class="why"><b>Why interactive</b>Reads the same threshold as every other figure, so the numbers in this table are the ones behind the dots, panels and heat map.</p><div id="ops"></div></div><div class="fig scroll" style="margin-top:14px"><h3>Paired difference from the generic question</h3><p class="why"><b>Why it is here</b>Both methods are scored on the same skills, so the interval is on the difference itself, not on two overlapping intervals.</p><div id="paired"></div></div></section>
 
+<section id="prevalence"><h2>Precision, prevalence and calibration</h2><p class="sub">ROC ignores how common malicious skills are. These views redraw the same test scores under an assumed prevalence and check whether the scores behave like probabilities. Descriptive; computed after the results were seen.</p><p class="interp"><b>How to read it.</b> The test sets are 61% or 77% malicious, which a real registry is unlikely to match. Recall and false positive rate do not change with prevalence; precision does. Pick an assumed share to see the precision each method would have, at its current threshold and along the whole curve.</p>
+<div class="filt"><label for="prev" class="lb" style="margin:0">Assumed malicious share</label><select id="prev"><option value="">Test set, as scored</option><option value="0.5">50%</option><option value="0.1">10%</option><option value="0.01">1%</option><option value="0.001">0.1%</option></select></div>
+<div class="two"><div class="fig"><h3>Precision against recall</h3><p class="why"><b>How it is built</b>Each point on a method's ROC curve gives recall and false positive rate; precision follows from them and the assumed share. Dots mark the current threshold. The dotted line is a method that flags at random.</p><div id="pr"></div></div>
+<div class="fig scroll"><h3>Average precision</h3><p class="why"><b>Reading it</b>Recall and false positive rate at each threshold are in the operating-point table above.</p><div id="ap"></div></div></div>
+<div class="fig scroll" style="margin-top:14px"><h3>Do the scores behave like probabilities?</h3><p class="why"><b>How it is built</b>Skills grouped by score in tenths (groups of 10 or more skills). On the diagonal, a score of 0.3 means 30% of such skills are malicious. Only our methods are shown: they return the model's probability of yes. Max and generic were never fitted to be calibrated; logreg was fitted on the training share above.</p><div class="two"><div id="cal" style="max-width:340px"></div><div id="cal-t"></div></div></div></section>
+
 <section id="transfer"><h2>Does the validation threshold transfer?</h2><p class="sub">Each threshold was chosen to give 5% false positives on validation. This is the rate it produced on the test sources, with 95% intervals. It follows the test-set switch and is fixed by the pre-registration.</p><p class="interp"><b>How to read it.</b> If the interval around a dot excludes the 5% line, the threshold chosen on validation did not transfer to the test sources.</p>
-<div class="fig"><div style="max-width:640px" id="dumb"></div></div></section>
+<div class="fig"><div style="max-width:640px" id="dumb"></div></div>
+<p class="interp"><b>Which rule?</b> They answer different questions. <i>FPR ≤ 5%</i> suits a review queue where reviewer time is the limit: it caps false alarms and accepts the recall that gives. <i>TPR ≥ 95%</i> suits a gate where a missed malicious skill is the costly error: it caps misses and accepts the false alarms. <i>Youden's J</i> treats a miss and a false alarm as equally costly and ignores how rare malicious skills are, so when they are rare most of what it flags is benign. On these tests no rule gives both: at 99% recall the false positive rate is 94% to 97% for logreg, and the FPR ≤ 5% rule catches only 17% to 24% of malicious skills from unseen sources with the targeted combiners. We did not pre-register a preferred rule; set the validation rule in the bar and read the operating-point table.</p></section>
 
 <section id="instruments"><h2>How each question behaves</h2><p class="sub">Score distributions for malicious and benign skills. The dashed line is the current threshold: orange to its left is a missed malicious skill, blue to its right is a false alarm.</p><p class="interp"><b>How to read it.</b> Orange mass left of the dashed line is malicious skills the question misses at this threshold; blue mass to its right is false alarms.</p>
 <div class="fig"><p class="why"><b>Why interactive</b>The threshold is the decision. Moving it shows what each question gives up, and the readouts update with it.</p>
@@ -138,7 +165,7 @@ table.heat thead th:first-child,table.heat tbody tr:not(.grp) th{position:sticky
 <div class="fit"><b>Threshold</b>Youden · TPR ≥ 95% · FPR ≤ 5%<span>chosen on 400 validation skills</span></div>
 <div><b>Test</b>Scored once, nothing re-tuned<span id="n-test"></span></div></div>
 <div class="key" style="margin-top:14px"><span><i style="background:var(--c1)"></i>Fit (train)</span><span><i style="background:var(--c2)"></i>Choose threshold (validation)</span><span><i style="background:var(--ink3)"></i>Measure (test)</span></div>
-<div class="split" id="split"></div></div></section>
+<div class="split" id="split"></div><h3 style="margin-top:14px">Malicious and benign skills in each part</h3><div id="comp"></div></div></section>
 
 <section id="failures"><h2>Where it fails</h2><p class="sub">Share of skills flagged, by source and label, at the current threshold. Green outline: behaving (at least 70% of malicious flagged, or at most 30% of benign). Orange: not.</p><p class="interp"><b>How to read it.</b> Orange cells are where the detector is failing at the current threshold. The SkillHarm row is explained in the case study below.</p>
 <div class="fig scroll"><p class="why"><b>Why interactive</b>A pattern here is a claim about specific skills. Clicking a cell takes you to them in the explorer below.</p><div id="heat"></div></div></section>
@@ -167,11 +194,13 @@ const QT=Object.fromEntries(Q.sets.ast10.map(c=>[c.id,c.text])),QY=Object.fromEn
 const K4=["AST01","AST02","AST03","AST04","AST05","generic"];
 
 const K=['AST01','AST02','AST03','AST04','AST05','max','logreg','ast10','generic','skillscreen','gpt55','typesafe'], KI=Object.fromEntries(K.map((k,i)=>[k,i+3]));
-const D={};for(const [p,PP] of Object.entries(RAW.protocols)){const src=[...new Set(PP.skills.map(s=>s.src))].sort();D[p]={split:PP.split,src,th:PP.thresholds,auc:PP.auc,vs:PP.vs_generic,held:PP.held,nh:PP.no_harm,sk:PP.skills.map(s=>[s.id,s.y,src.indexOf(s.src),...K.map(k=>s.s[k]),...K4.map(k=>s.s004[k])])}}
+const D={};for(const [p,PP] of Object.entries(RAW.protocols)){const src=[...new Set(PP.skills.map(s=>s.src))].sort();D[p]={split:PP.split,src,th:PP.thresholds,auc:PP.auc,vs:PP.vs_generic,held:PP.held,nh:PP.no_harm,comp:PP.comp,sk:PP.skills.map(s=>[s.id,s.y,src.indexOf(s.src),...K.map(k=>s.s[k]),...K4.map(k=>s.s004[k])])}}
 const NAME={AST01:'AST01',AST02:'AST02',AST03:'AST03',AST04:'AST04',AST05:'AST05',max:'Targeted max',logreg:'Targeted logreg',ast10:'Targeted, one call',generic:'Generic question',skillscreen:'SkillScreen (fine-tuned)',gpt55:'GPT-5.5 judge',typesafe:'TypeSafe Jev 1.13'};
+const TIP={max:'Highest of the five check scores.',logreg:'Weighted sum of the five check scores (logistic regression fitted on 300 training skills), mapped to 0 to 1.',ast10:'The same five questions asked in one model call instead of five, then the highest score.',generic:'One question: is this skill malicious?',skillscreen:"SkillScreen's fine-tuned 2B model (seed 42), scored by its authors.",gpt55:'GPT-5.5 zero-shot judge, scored by SkillScreen\'s authors.',typesafe:"SkillScreen's TypeSafe Jev 1.13 baseline: one fixed question to a decision model.",AST04:'Only the AST04 question.'};
+const nt=k=>TIP[k]?`<abbr title="${TIP[k]}">${NAME[k]}</abbr>`:NAME[k];
 const CHECKS=K.slice(0,5), OURS=new Set(K.slice(0,9)), SHORT={'ATR Skill Security Benchmark':'ATR'};
 const SERIES=[['logreg','--c1',0],['max','--c2',0],['ast10','--c6',0],['generic','--c3',0],['skillscreen','--c4',1],['gpt55','--c5',1]];
-const S={p:'sd',m:'val',rule:'fpr05',fpr:.05,hid:new Set(),ax:'logreg',ay:'skillscreen',brush:null,filt:null,pin:[],roc:null,shown:12};
+const S={prev:null,p:'sd',m:'val',rule:'fpr05',fpr:.05,hid:new Set(),ax:'logreg',ay:'skillscreen',brush:null,filt:null,pin:[],roc:null,shown:12};
 const $=id=>document.getElementById(id), f3=x=>x==null?'–':x.toFixed(3), pc=x=>x==null||isNaN(x)?'–':(100*x).toFixed(1)+'%';
 const P=()=>D[S.p], SK=()=>P().sk, v=(s,k)=>s[KI[k]];
 const cache={};
@@ -195,6 +224,8 @@ function bar(){
   const st=stats('logreg');
   $('bar-read').innerHTML=`<b>${T.toLocaleString()}</b> test skills · ${pos} malicious · logreg flags at ≥ <b>${thr('logreg').toFixed(3)}</b>: recall <b>${pc(st.tpr)}</b>, false positives <b>${pc(st.fpr)}</b>`;
   $('n-test').textContent=`${T.toLocaleString()} skills, ${P().split}`;
+  const C=P().comp,share=k=>C[k][0]/(C[k][0]+C[k][1]);
+  $('comp').innerHTML='<div class="scroll"><table class="ops"><thead><tr><th>Part</th><th>Used to</th><th>Malicious</th><th>Benign</th><th>Malicious share</th></tr></thead><tbody>'+[['train','fit the logreg weights'],['validation','choose the threshold'],['test','measure']].map(([k,u])=>`<tr><td>${k}</td><td style="text-align:left">${u}</td><td>${C[k][0].toLocaleString()}</td><td>${C[k][1].toLocaleString()}</td><td>${pc(share(k))}</td></tr>`).join('')+`</tbody></table></div><p class="note">Train and validation were sampled in proportion to the full pool, not balanced. ${Math.abs(share('train')-share('test'))>.05?`Here the fitting and threshold data are about ${pc(share('validation'))} malicious while the test set is ${pc(share('test'))}, so weights and thresholds were set under a different malicious share than they are measured on.`:'Here the malicious share is similar in all three parts.'} Real skill registries are unlikely to be this malicious: see precision and calibration below.</p>`;
   $('split').innerHTML=`<span style="flex:300;background:var(--c1)">train 300</span><span style="flex:400;background:var(--c2)">val 400</span><span style="flex:${T};background:var(--ink3)">test ${T.toLocaleString()}</span>`;
 }
 /* ---------- distributions ---------- */
@@ -221,16 +252,16 @@ function minis(){
 /* ---------- ROC ---------- */
 function rocChart(){
   const lg=$('legend');lg.replaceChildren();
-  for(const [k,c,d] of SERIES){const b=document.createElement('button');b.type='button';b.setAttribute('aria-pressed',String(!S.hid.has(k)));b.innerHTML=`<i style="display:inline-block;width:20px;margin-right:6px;border-top:2px ${d?'dashed':'solid'} var(${c})"></i>${NAME[k]} <b style="font:500 12px var(--mono);margin-left:6px;color:var(--ink)">${f3(auroc(k))}</b>`;b.onclick=()=>{S.hid.has(k)?S.hid.delete(k):S.hid.add(k);rocChart()};lg.append(b)}
+  for(const [k,c,d] of SERIES){const b=document.createElement('button');b.type='button';if(TIP[k])b.title=TIP[k];b.setAttribute('aria-pressed',String(!S.hid.has(k)));b.innerHTML=`<i style="display:inline-block;width:20px;margin-right:6px;border-top:2px ${d?'dashed':'solid'} var(${c})"></i>${NAME[k]} <b style="font:500 12px var(--mono);margin-left:6px;color:var(--ink)">${f3(auroc(k))}</b>`;b.onclick=()=>{S.hid.has(k)?S.hid.delete(k):S.hid.add(k);rocChart()};lg.append(b)}
   const w=560,h=360,L=44,R=12,T0=10,B=38,W=w-L-R,Hh=h-T0-B,lo=-3,X=f=>L+(Math.log10(Math.max(f,1e-3))-lo)/3*W,Y=t=>T0+(1-t)*Hh;
   const svg=svgEl(w,h,'ROC curves, log false positive rate');svg.tabIndex=0;let o='';
   for(const t of [0,.25,.5,.75,1])o+=`<line x1="${L}" x2="${L+W}" y1="${Y(t)}" y2="${Y(t)}" class="grid"/><text x="${L-6}" y="${Y(t)+4}" text-anchor="end">${t.toFixed(2)}</text>`;
   for(const e of [-3,-2,-1,0]){const x=L+(e+3)/3*W;o+=`<line x1="${x}" x2="${x}" y1="${T0}" y2="${T0+Hh}" class="grid"/><text x="${x}" y="${h-20}" text-anchor="middle">${10**e}</text>`}
   o+=`<rect x="${X(.001)}" y="${T0}" width="${X(.05)-X(.001)}" height="${Hh}" class="band"/><text x="${(X(.001)+X(.05))/2}" y="${T0+12}" text-anchor="middle" class="lbl">FPR ≤ 5%</text><text x="${L+W/2}" y="${h-4}" text-anchor="middle" class="lbl">False positive rate (log scale)</text>`;
-  const shown=SERIES.filter(s=>!S.hid.has(s[0]));
+  const shown=SERIES.filter(s=>!S.hid.has(s[0]));let dots='';
   for(const [k,c,d] of shown){let p='';roc(k).forEach(([f,t],i)=>{p+=(i?'L':'M')+X(f).toFixed(1)+','+Y(t).toFixed(1)});o+=`<path d="${p}" fill="none" stroke="var(${c})" stroke-width="2"${d?' stroke-dasharray="6 4"':''}/>`;
-    const st=stats(k);o+=`<circle cx="${X(st.fpr)}" cy="${Y(st.tpr)}" r="5" fill="var(${c})" stroke="var(--surface)" stroke-width="2"><title>${NAME[k]} at the current threshold: recall ${pc(st.tpr)}, FPR ${pc(st.fpr)}</title></circle>`}
-  o+=`<line id="rx" y1="${T0}" y2="${T0+Hh}" stroke="var(--ink3)" visibility="hidden"/><rect id="rh" x="${L}" y="${T0}" width="${W}" height="${Hh}" fill="transparent"/>`;
+    const st=stats(k),fl=d?`fill:var(--surface);stroke:var(${c})`:`fill:var(${c});stroke:var(--surface)`;dots+=`<circle cx="${X(st.fpr)}" cy="${Y(st.tpr)}" r="5" style="${fl};stroke-width:2"><title>${NAME[k]} at the current threshold: recall ${pc(st.tpr)}, FPR ${pc(st.fpr)}</title></circle>`}
+  o+=`<line id="rx" y1="${T0}" y2="${T0+Hh}" stroke="var(--ink3)" visibility="hidden"/><rect id="rh" x="${L}" y="${T0}" width="${W}" height="${Hh}" fill="transparent"/>${dots}`;   // dots after the hover rectangle, or it covers them and their tooltips never show
   svg.innerHTML=o;$('roc').replaceChildren(svg);
   const rx=svg.querySelector('#rx'),rd=$('roc-read');
   const show=fx=>{S.roc=fx;if(fx==null){rx.setAttribute('visibility','hidden');return}
@@ -250,7 +281,7 @@ function forest(){
   svg.innerHTML=o;$('forest').replaceChildren(svg)}
 function ops(){
   let o='<table class="ops"><thead><tr><th>Method</th><th>Threshold</th><th>Recall</th><th>False positive rate</th><th>Precision</th><th>Flagged</th></tr></thead><tbody>';
-  for(const k of K){const t=thr(k),s=stats(k);o+=`<tr><td>${NAME[k]}</td><td>${t.toFixed(3)}</td><td>${pc(s.tpr)}</td><td>${pc(s.fpr)}</td><td>${pc(s.prec)}</td><td>${s.tp+s.fp}</td></tr>`}
+  for(const k of K){const t=thr(k),s=stats(k);o+=`<tr><td>${nt(k)}</td><td>${t.toFixed(3)}</td><td>${pc(s.tpr)}</td><td>${pc(s.fpr)}</td><td>${pc(s.prec)}</td><td>${s.tp+s.fp}</td></tr>`}
   $('ops').innerHTML=o+'</tbody></table>'}
 /* ---------- heat ---------- */
 function heat(){
@@ -372,11 +403,37 @@ function setP(p){S.p=p;S.filt=null;S.brush=null;S.pin=[];S.shown=12;syncSeg();al
 if(['sd','msd'].includes(Q0.get('p')))S.p=Q0.get('p');if(['val','fpr'].includes(Q0.get('m')))S.m=Q0.get('m');if(['fpr05','youden','tpr95'].includes(Q0.get('rule')))S.rule=Q0.get('rule');
 const f0=parseFloat(Q0.get('fpr'));if(f0>0&&f0<=.3)S.fpr=f0;
 try{new IntersectionObserver(e=>document.querySelector('.bar').classList.toggle('stuck',!e[0].isIntersecting)).observe($('hero'))}catch(_){document.querySelector('.bar').classList.add('stuck')}
+
+/* ---------- precision, prevalence, calibration ---------- */
+const pi=()=>S.prev??SK().filter(s=>s[1]).length/SK().length, prec=(f,t,q)=>t*q/(t*q+f*(1-q));
+function ap(k){let r0=0,a=0;for(const [f,t] of roc(k).slice(1)){a+=(t-r0)*prec(f,t,pi());r0=t}return a}
+function prevalence(){
+  const q=pi(),w=520,h=330,L=40,R=12,T0=10,B=34,W=w-L-R,Hh=h-T0-B,X=r=>L+r*W,Y=p=>T0+(1-p)*Hh,svg=svgEl(w,h,'Precision against recall at the assumed malicious share');let o='';
+  for(const t of [0,.25,.5,.75,1])o+=`<line x1="${L}" x2="${L+W}" y1="${Y(t)}" y2="${Y(t)}" class="grid"/><text x="${L-6}" y="${Y(t)+4}" text-anchor="end">${t.toFixed(2)}</text><text x="${X(t)}" y="${h-18}" text-anchor="middle">${t.toFixed(2)}</text>`;
+  o+=`<text x="${L+W/2}" y="${h-3}" text-anchor="middle" class="lbl">Recall</text><line x1="${L}" x2="${L+W}" y1="${Y(q)}" y2="${Y(q)}" class="ref"/>`;let dots='';
+  for(const [k,c,d] of SERIES){let pth='';roc(k).slice(1).forEach(([f,t],i)=>{pth+=(i?'L':'M')+X(t).toFixed(1)+','+Y(prec(f,t,q)).toFixed(1)});o+=`<path d="${pth}" fill="none" stroke="var(${c})" stroke-width="2"${d?' stroke-dasharray="6 4"':''}/>`;
+    const st=stats(k);if(st.tp+st.fp)dots+=`<circle cx="${X(st.tpr)}" cy="${Y(prec(st.fpr,st.tpr,q))}" r="5" style="${d?`fill:var(--surface);stroke:var(${c})`:`fill:var(${c});stroke:var(--surface)`};stroke-width:2"><title>${NAME[k]} at the current threshold: recall ${pc(st.tpr)}, precision ${pc(prec(st.fpr,st.tpr,q))}</title></circle>`}
+  svg.innerHTML=o+dots;$('pr').replaceChildren(svg);
+  let t='<table class="ops"><thead><tr><th>Method</th><th>Average precision</th><th>Precision at threshold</th></tr></thead><tbody>';
+  for(const k of K){const s=stats(k);t+=`<tr><td>${nt(k)}</td><td>${f3(ap(k))}</td><td>${s.tp+s.fp?pc(prec(s.fpr,s.tpr,q)):'–'}</td></tr>`}
+  $('ap').innerHTML=t+`</tbody></table><p class="note">Assumed malicious share: <b>${pc(q)}</b>${S.prev==null?' (the test set)':''}. A method that flags at random has average precision ${f3(q)}. Average precision is the step-wise area under the precision-recall curve.</p>`;
+  const cm=['logreg','max','ast10','generic'],cs=['--c1','--c2','--c6','--c3'],cw=300,ch=300,cl=34,cB=30,cT=8,cR=8,CX=x=>cl+x*(cw-cl-cR),CY=y=>cT+(1-y)*(ch-cT-cB),cv=svgEl(cw,ch,'Calibration: observed malicious share against score');
+  let co='';for(const t of [0,.5,1])co+=`<line x1="${cl}" x2="${cw-cR}" y1="${CY(t)}" y2="${CY(t)}" class="grid"/><text x="${cl-5}" y="${CY(t)+4}" text-anchor="end">${t}</text><text x="${CX(t)}" y="${ch-14}" text-anchor="middle">${t}</text>`;
+  co+=`<line x1="${CX(0)}" y1="${CY(0)}" x2="${CX(1)}" y2="${CY(1)}" class="ref"/><text x="${cl+(cw-cl-cR)/2}" y="${ch-1}" text-anchor="middle" class="lbl">Score</text>`;
+  let rows='<table class="ops"><thead><tr><th>Method</th><th>Brier</th><th>Mean score</th></tr></thead><tbody>';const base=SK().filter(s=>s[1]).length/SK().length;
+  cm.forEach((k,i)=>{const a=SK().filter(s=>v(s,k)!=null),bins=Array.from({length:10},()=>[0,0,0]);let br=0,ms=0;
+    for(const s of a){const x=v(s,k),b=bins[Math.min(9,Math.floor(x*10))];b[0]++;b[1]+=x;b[2]+=s[1];br+=(x-s[1])**2;ms+=x}
+    const pts=bins.filter(b=>b[0]>=10).map(b=>[b[1]/b[0],b[2]/b[0],b[0]]);
+    co+=`<path d="${pts.map(([x,y],j)=>(j?'L':'M')+CX(x).toFixed(1)+','+CY(y).toFixed(1)).join('')}" fill="none" stroke="var(${cs[i]})" stroke-width="2"/>`+pts.map(([x,y,n])=>`<circle cx="${CX(x)}" cy="${CY(y)}" r="3.5" style="fill:var(${cs[i]})"><title>${NAME[k]}: mean score ${x.toFixed(2)}, ${pc(y)} malicious (${n} skills)</title></circle>`).join('');
+    rows+=`<tr><td><i style="display:inline-block;width:14px;margin-right:6px;border-top:2px solid var(${cs[i]})"></i>${nt(k)}</td><td>${f3(br/a.length)}</td><td>${f3(ms/a.length)}</td></tr>`});
+  cv.innerHTML=co;$('cal').replaceChildren(cv);
+  $('cal-t').innerHTML=rows+`<tr><td>Same score for every skill (test share)</td><td>${f3(base*(1-base))}</td><td>${f3(base)}</td></tr></tbody></table><p class="note">Brier: mean squared gap between score and label; lower is better. The test set is ${pc(base)} malicious, so a mean score far from that is a sign the scores are not read as probabilities here. Your assumed share does not change this view.</p>`}
 /* ---------- wiring ---------- */
-function all(){hero();paired();meth();noharm();shStrip();bar();minis();rocChart();forest();ops();heat();explorer();dumb();writeURL()}
-function light(){shStrip();bar();minis();rocChart();ops();heat();const sv=$('scatter').firstChild;sv&&sv.moveThr?sv.moveThr():scatter();compare();writeURL()}   // threshold changes: figures that read it
+function all(){hero();paired();meth();noharm();shStrip();bar();minis();rocChart();forest();ops();prevalence();heat();explorer();dumb();writeURL()}
+function light(){shStrip();bar();minis();rocChart();ops();prevalence();heat();const sv=$('scatter').firstChild;sv&&sv.moveThr?sv.moveThr():scatter();compare();writeURL()}   // threshold changes: figures that read it
 for(const b of $('seg-p').querySelectorAll('button'))b.onclick=()=>setP(b.dataset.p);
 for(const b of $('seg-m').querySelectorAll('button'))b.onclick=()=>{S.m=b.dataset.m;syncSeg();light()};
+$('prev').onchange=e=>{S.prev=e.target.value?+e.target.value:null;prevalence()};
 $('rule').onchange=e=>{S.rule=e.target.value;light()};
 let lq=0;const lightSoon=()=>lq||(lq=requestAnimationFrame(()=>{lq=0;light()}));   // at most one redraw per frame while the slider moves
 $('fpr').oninput=e=>{S.fpr=Math.round(10**(-2.3+e.target.value/100*(Math.log10(.3)+2.3))*1000)/1000;lightSoon()};
